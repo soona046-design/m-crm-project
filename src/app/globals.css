@@ -1,26 +1,15 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Next.js 폰트 변수 정의 */
+  --font-noto-sans-kr: var(--font-noto-sans-kr); /* 실제 Noto Sans KR 폰트 변수 */
+  --font-lato: var(--font-lato); /* 실제 Lato 폰트 변수 */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Material UI 테마에서 폰트 패밀리를 정의하므로, 여기서는 폰트 변수를 제거합니다. */
+  /* 대신, MUI 테마에서 font-family를 notoSansKR.style.fontFamily 등으로 직접 설정했습니다. */
+  /* Material UI가 body에 적용하는 폰트가 우선합니다. */
 }
