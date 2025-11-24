@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ko } from 'date-fns/locale';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -16,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { Collapse } from '@mui/material';
 import api from '@/lib/axios';
 
@@ -155,6 +160,17 @@ interface SummaryMetrics {
 }
 
 export default function ChannelPivotDashboardPage() {
+  // 날짜 범위 state (기본값: 최근 3개월)
+  const getDefaultStartDate = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 2); // 3개월 전
+    date.setDate(1); // 해당 월의 첫날
+    return date;
+  };
+
+  const [startDate, setStartDate] = useState<Date | null>(getDefaultStartDate());
+  const [endDate, setEndDate] = useState<Date | null>(new Date());
+
   const [channelPerformanceData, setChannelPerformanceData] = useState<ChannelPerformanceData[]>([]);
   const [categoryPerformanceData, setCategoryPerformanceData] = useState<CategoryPerformanceData[]>([]);
   const [pivotTableData, setPivotTableData] = useState<PivotTableData[]>([]);
@@ -587,22 +603,21 @@ export default function ChannelPivotDashboardPage() {
     alert('캠페인이 삭제되었습니다.');
   };
 
-  // TODO: 기간 필터링, 지점 필터링 등 구현
+  // TODO: 지점 필터링 등 구현
   const fetchChannelData = useCallback(async () => {
     console.log('fetchChannelData called');
     setLoading(true);
     setError(null);
     try {
-      // 날짜 범위 설정 (최근 3개월)
-      const now = new Date();
-      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split('T')[0];
+      // 날짜 범위 설정 (state에서 가져옴)
+      const startDateStr = startDate ? startDate.toISOString().split('T')[0] : new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1).toISOString().split('T')[0];
+      const endDateStr = endDate ? endDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
-      console.log('Fetching from backend API', { startDate, endDate });
+      console.log('Fetching from backend API', { startDate: startDateStr, endDate: endDateStr });
 
       // 백엔드 API 호출
       const response = await api.get('/api/dashboards/channel-pivot', {
-        params: { startDate, endDate }
+        params: { startDate: startDateStr, endDate: endDateStr }
       });
 
       if (response.data && response.data.pivotTable && response.data.pivotTable.length > 0) {
@@ -731,7 +746,7 @@ export default function ChannelPivotDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   // 채널 카테고리 및 매핑 데이터 로드
   const fetchChannelManagementData = async () => {
@@ -783,6 +798,106 @@ export default function ChannelPivotDashboardPage() {
       <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
         광고 비용, 리드 유입량, 전환율을 기반으로 채널별 ROI를 측정합니다
       </Typography>
+
+      {/* 날짜 범위 선택 UI */}
+      <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarTodayIcon sx={{ color: '#1976d2' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              조회 기간
+            </Typography>
+          </Box>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+            <DatePicker
+              label="시작일"
+              value={startDate}
+              onChange={(newValue) => setStartDate(newValue)}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { bgcolor: 'white', minWidth: 160 }
+                }
+              }}
+            />
+            <Typography variant="body1" sx={{ mx: 1 }}>
+              ~
+            </Typography>
+            <DatePicker
+              label="종료일"
+              value={endDate}
+              onChange={(newValue) => setEndDate(newValue)}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { bgcolor: 'white', minWidth: 160 }
+                }
+              }}
+            />
+          </LocalizationProvider>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                const today = new Date();
+                const lastWeek = new Date();
+                lastWeek.setDate(today.getDate() - 7);
+                setStartDate(lastWeek);
+                setEndDate(today);
+              }}
+            >
+              최근 1주
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                const today = new Date();
+                const lastMonth = new Date();
+                lastMonth.setMonth(today.getMonth() - 1);
+                setStartDate(lastMonth);
+                setEndDate(today);
+              }}
+            >
+              최근 1개월
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                const today = new Date();
+                const threeMonthsAgo = new Date();
+                threeMonthsAgo.setMonth(today.getMonth() - 2);
+                threeMonthsAgo.setDate(1);
+                setStartDate(threeMonthsAgo);
+                setEndDate(today);
+              }}
+            >
+              최근 3개월
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                const today = new Date();
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(today.getMonth() - 6);
+                sixMonthsAgo.setDate(1);
+                setStartDate(sixMonthsAgo);
+                setEndDate(today);
+              }}
+            >
+              최근 6개월
+            </Button>
+          </Box>
+          {startDate && endDate && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+              {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))}일간의 데이터
+            </Typography>
+          )}
+        </Box>
+      </Paper>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
