@@ -1,23 +1,57 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
 import LeadListTable from '@/components/LeadListTable'; // LeadListTable 컴포넌트 import
+import LeadFilterDrawer from '@/components/LeadFilterDrawer'; // 필터 드로어 import
 import axios from 'axios'; // API 호출을 위해 axios import
+import api from '@/lib/axios'; // 채널 관리 API 호출용
+import { useAuth } from '@/contexts/AuthContext';
+import { getPriorityInfoFromScore } from '@/lib/leadPriority';
 
 interface Lead {
   lead_id: string; // 백엔드 모델에 맞게 id 대신 lead_id 사용
-  name: string; // 이름
+  name: string; // 업체명
   primary_phone: string; // 마스킹이 필요한 전화번호
   status: string;
-  utm_source: string; // 채널
-  last_contact_at: string; // 최근 접점 (datetime)
+  utm_source: string | string[]; // 인입경로 (단일 또는 다중)
+  utm_campaign?: string; // 캠페인
+  last_contact_at: string; // 날짜
   score: number;
   assignee_name: string; // 담당자 이름
   sla_status: string; // SLA 상태 (백엔드 Ticket 모델의 sla_status)
+  communication_count: number; // 커뮤니케이션 카운트 (호환성 유지)
+  tickets_count?: number; // 티켓(문의) 수
+  appointments_count?: number; // 예약 수
+  revenue?: number; // 매출 (선택)
+  treatment?: string | string[]; // 문의서비스 (단일 또는 다중)
+  consultation_notes?: string; // 상담 메모 (선택)
+}
+
+interface NewLead {
+  name: string;
+  primary_phone: string;
+  status: string;
+  utm_source: string[]; // 인입경로 (다중 선택)
+  utm_campaign?: string; // 캠페인 추가
+  score: number;
+  assignee_name: string;
+  revenue?: number;
+  treatment: string[]; // 문의서비스 (다중 선택)
+  consultation_notes?: string;
+}
+
+interface FilterState {
+  status: string[];
+  channel: string[];
+  assignee: string[];
+  slaStatus: string[];
+  scoreRange: [number, number];
+  dateRange: { start: string; end: string };
 }
 
 export default function LeadsPage() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
   const [page, setPage] = useState(0);
@@ -25,33 +59,327 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(''); // 검색어 상태 추가
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // 필터 드로어 상태
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>({
+    status: [],
+    channel: [],
+    assignee: [],
+    slaStatus: [],
+    scoreRange: [0, 100],
+    dateRange: { start: '', end: '' },
+  }); // 적용된 필터
 
-  // 실제 백엔드 API 엔드포인트와 연동
+  // 사용 가능한 담당자 목록을 가져오는 함수 (클라이언트에서만 실행)
+  const getAvailableAssignees = useCallback(() => {
+    const defaultAssignees = [
+      { user_id: '1', name: '김상담', role: '상담매니저' },
+      { user_id: '2', name: '이상담', role: '상담매니저' },
+      { user_id: '3', name: '박상담', role: '상담매니저' },
+      { user_id: '4', name: '최관리자', role: '지점관리자' }
+    ];
+
+    // 클라이언트에서만 localStorage 접근
+    if (typeof window === 'undefined') {
+      return defaultAssignees;
+    }
+
+    try {
+      const storedUsers = localStorage.getItem('mcrm_users');
+      if (storedUsers) {
+        const users = JSON.parse(storedUsers);
+        return users.filter((user: any) => user.active !== false).map((user: any) => ({
+          user_id: user.user_id,
+          name: user.name,
+          role: user.role || '상담매니저'
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading users from localStorage:', error);
+    }
+
+    return defaultAssignees;
+  }, []);
+
+  const [availableAssignees, setAvailableAssignees] = useState<Array<{user_id: string; name: string; role: string}>>([
+    { user_id: '1', name: '김상담', role: '상담매니저' },
+    { user_id: '2', name: '이상담', role: '상담매니저' },
+    { user_id: '3', name: '박상담', role: '상담매니저' },
+    { user_id: '4', name: '최관리자', role: '지점관리자' }
+  ]);
+
+  // 채널 관리에서 가져온 활성 채널 목록
+  const [availableChannels, setAvailableChannels] = useState<string[]>([]);
+
+  // 새 리드 등록 모달 상태
+  const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const [newLead, setNewLead] = useState<NewLead>({
+    name: '',
+    primary_phone: '',
+    status: '상담완료',
+    utm_source: [], // 인입경로 초기값 (빈 배열)
+    utm_campaign: '', // 캠페인 초기값
+    score: 50,
+    assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
+    revenue: 0,
+    treatment: [], // 문의서비스 초기값 (빈 배열)
+    consultation_notes: ''
+  });
+
+  // 사용 가능한 캠페인 목록 상태
+  const [availableCampaigns, setAvailableCampaigns] = useState<string[]>([]);
+
+  // Mock implementation for development
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/leads', { // 백엔드 API 엔드포인트 호출
-        params: {
-          page: page + 1, // Laravel 페이지네이션은 1부터 시작
-          per_page: rowsPerPage,
-          search: searchTerm, // 검색어 파라미터 추가
-          // TODO: 필터링, 정렬 파라미터 추가
+      // Check if leads exist in localStorage (클라이언트에서만)
+      let allLeads: Lead[];
+
+      // Mock leads data (default data)
+      const mockLeads: Lead[] = [
+        {
+          lead_id: 'lead_001',
+          name: '김환자',
+          primary_phone: '010-1234-****',
+          status: '상담완료',
+          utm_source: 'Google Ads',
+          last_contact_at: '2025-09-29T09:00:00Z',
+          score: 85,
+          assignee_name: '김상담',
+          sla_status: '정상',
+          communication_count: 3
         },
+        {
+          lead_id: 'lead_002',
+          name: '이환자',
+          primary_phone: '010-5678-****',
+          status: '미팅완료',
+          utm_source: 'Facebook Ads',
+          last_contact_at: '2025-09-29T11:00:00Z',
+          score: 78,
+          assignee_name: '이상담',
+          sla_status: '경고',
+          communication_count: 5
+        },
+        {
+          lead_id: 'lead_003',
+          name: '박환자',
+          primary_phone: '010-9012-****',
+          status: '상담완료',
+          utm_source: '네이버',
+          last_contact_at: '2025-09-29T07:00:00Z',
+          score: 92,
+          assignee_name: '박상담',
+          sla_status: '정상',
+          communication_count: 1
+        },
+        {
+          lead_id: 'lead_004',
+          name: '최환자',
+          primary_phone: '010-3456-****',
+          status: '계약완료',
+          utm_source: 'Instagram',
+          last_contact_at: '2025-09-28T16:00:00Z',
+          score: 95,
+          assignee_name: '김상담',
+          sla_status: '완료',
+          communication_count: 8
+        },
+        {
+          lead_id: 'lead_005',
+          name: '정환자',
+          primary_phone: '010-7890-****',
+          status: '미팅완료',
+          utm_source: 'YouTube',
+          last_contact_at: '2025-09-29T13:30:00Z',
+          score: 72,
+          assignee_name: '이상담',
+          sla_status: '정상',
+          communication_count: 4
+        },
+        {
+          lead_id: 'lead_006',
+          name: '강환자',
+          primary_phone: '010-2468-****',
+          status: '상담완료',
+          utm_source: 'Google Ads',
+          last_contact_at: '2025-09-29T14:15:00Z',
+          score: 88,
+          assignee_name: '박상담',
+          sla_status: '정상',
+          communication_count: 2
+        },
+        {
+          lead_id: 'lead_007',
+          name: '조환자',
+          primary_phone: '010-1357-****',
+          status: '미팅완료',
+          utm_source: 'Facebook Ads',
+          last_contact_at: '2025-09-29T08:45:00Z',
+          score: 83,
+          assignee_name: '김상담',
+          sla_status: '경고',
+          communication_count: 6
+        },
+        {
+          lead_id: 'lead_008',
+          name: '윤환자',
+          primary_phone: '010-8642-****',
+          status: '계약완료',
+          utm_source: '네이버',
+          last_contact_at: '2025-09-28T17:20:00Z',
+          score: 91,
+          assignee_name: '이상담',
+          sla_status: '완료',
+          communication_count: 7
+        },
+        {
+          lead_id: 'lead_009',
+          name: '임환자',
+          primary_phone: '010-9753-****',
+          status: '상담완료',
+          utm_source: 'Instagram',
+          last_contact_at: '2025-09-29T12:10:00Z',
+          score: 76,
+          assignee_name: '박상담',
+          sla_status: '정상',
+          communication_count: 2
+        },
+        {
+          lead_id: 'lead_010',
+          name: '한환자',
+          primary_phone: '010-1470-****',
+          status: '미팅완료',
+          utm_source: 'YouTube',
+          last_contact_at: '2025-09-29T15:25:00Z',
+          score: 89,
+          assignee_name: '김상담',
+          sla_status: '정상',
+          communication_count: 5
+        },
+        {
+          lead_id: 'lead_011',
+          name: '오환자',
+          primary_phone: '010-2581-****',
+          status: '상담완료',
+          utm_source: 'Google Ads',
+          last_contact_at: '2025-09-29T10:30:00Z',
+          score: 94,
+          assignee_name: '이상담',
+          sla_status: '정상',
+          communication_count: 1
+        },
+        {
+          lead_id: 'lead_012',
+          name: '서환자',
+          primary_phone: '010-3692-****',
+          status: '계약완료',
+          utm_source: 'Facebook Ads',
+          last_contact_at: '2025-09-28T14:45:00Z',
+          score: 87,
+          assignee_name: '박상담',
+          sla_status: '완료',
+          communication_count: 9
+        }
+      ];
+
+      if (typeof window !== 'undefined') {
+        const storedLeads = localStorage.getItem('mcrm_leads');
+
+        if (storedLeads) {
+          allLeads = JSON.parse(storedLeads);
+        } else {
+          // Store initial data to localStorage
+          localStorage.setItem('mcrm_leads', JSON.stringify(mockLeads));
+          allLeads = mockLeads;
+        }
+      } else {
+        // SSR 환경에서는 기본 Mock 데이터 사용
+        allLeads = mockLeads;
+      }
+
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Apply search filter if searchTerm exists
+      let filteredLeads = allLeads;
+      if (searchTerm) {
+        filteredLeads = filteredLeads.filter(lead =>
+          lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          lead.primary_phone.includes(searchTerm) ||
+          lead.utm_source.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          lead.assignee_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Apply filters
+      if (appliedFilters.status.length > 0) {
+        filteredLeads = filteredLeads.filter(lead => appliedFilters.status.includes(lead.status));
+      }
+      if (appliedFilters.channel.length > 0) {
+        filteredLeads = filteredLeads.filter(lead => appliedFilters.channel.includes(lead.utm_source));
+      }
+      if (appliedFilters.assignee.length > 0) {
+        filteredLeads = filteredLeads.filter(lead => appliedFilters.assignee.includes(lead.assignee_name));
+      }
+      if (appliedFilters.slaStatus.length > 0) {
+        filteredLeads = filteredLeads.filter(lead => appliedFilters.slaStatus.includes(lead.sla_status));
+      }
+      if (appliedFilters.scoreRange[0] !== 0 || appliedFilters.scoreRange[1] !== 100) {
+        filteredLeads = filteredLeads.filter(lead =>
+          lead.score >= appliedFilters.scoreRange[0] && lead.score <= appliedFilters.scoreRange[1]
+        );
+      }
+      if (appliedFilters.dateRange.start || appliedFilters.dateRange.end) {
+        filteredLeads = filteredLeads.filter(lead => {
+          const leadDate = new Date(lead.last_contact_at);
+          const startDate = appliedFilters.dateRange.start ? new Date(appliedFilters.dateRange.start) : null;
+          const endDate = appliedFilters.dateRange.end ? new Date(appliedFilters.dateRange.end) : null;
+
+          if (startDate && endDate) {
+            return leadDate >= startDate && leadDate <= endDate;
+          } else if (startDate) {
+            return leadDate >= startDate;
+          } else if (endDate) {
+            return leadDate <= endDate;
+          }
+          return true;
+        });
+      }
+
+      // Sort by last_contact_at in descending order (newest first)
+      filteredLeads.sort((a, b) => {
+        const dateA = new Date(a.last_contact_at).getTime();
+        const dateB = new Date(b.last_contact_at).getTime();
+        return dateB - dateA; // 내림차순 정렬 (최신이 먼저)
       });
-      setLeads(response.data.data); // Laravel paginate 응답 형식에 맞춰 data 속성 접근
-      setTotalLeads(response.data.total); // 전체 리드 수 설정
+
+      // Simulate pagination
+      const startIndex = page * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+      const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+
+      setLeads(paginatedLeads);
+      setTotalLeads(filteredLeads.length);
     } catch (err) {
       console.error("Failed to fetch leads:", err);
       setError("Failed to load leads. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm]); // searchTerm을 의존성 배열에 추가
+  }, [page, rowsPerPage, searchTerm, appliedFilters]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  // 클라이언트에서 assignees 업데이트
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setAvailableAssignees(getAvailableAssignees());
+    }
+  }, [getAvailableAssignees]);
 
   const handlePageChange = useCallback((event: unknown, newPage: number) => {
     setPage(newPage);
@@ -76,24 +404,288 @@ export default function LeadsPage() {
   }, []);
 
   const handleFilterClick = useCallback(() => {
-    alert('필터 드로어 열기'); // 실제 필터 드로어 로직으로 교체 필요
+    setFilterDrawerOpen(true);
+  }, []);
+
+  const handleApplyFilters = useCallback((filters: FilterState) => {
+    setAppliedFilters(filters);
+    setPage(0); // 필터 적용 시 첫 페이지로 이동
   }, []);
 
   const handleExportClick = useCallback(() => {
-    alert('CSV 내보내기 기능'); // 실제 CSV 내보내기 로직 (백엔드 API 호출)으로 교체 필요
+    try {
+      // localStorage에서 모든 리드 데이터 가져오기
+      let allLeads: Lead[] = [];
+
+      if (typeof window !== 'undefined') {
+        const storedLeads = localStorage.getItem('mcrm_leads');
+        if (storedLeads) {
+          allLeads = JSON.parse(storedLeads);
+        }
+      }
+
+      if (allLeads.length === 0) {
+        alert('내보낼 리드가 없습니다.');
+        return;
+      }
+
+      // CSV 헤더
+      const headers = [
+        '리드ID',
+        '이름',
+        '전화번호',
+        '상태',
+        '채널',
+        '최근접점',
+        '스코어',
+        '우선순위',
+        'C.C',
+        '담당자',
+        'SLA상태'
+      ];
+
+      // CSV 데이터 행 생성
+      const csvRows = allLeads.map(lead => {
+        const priorityInfo = getPriorityInfoFromScore(lead.score);
+        const formattedDate = new Date(lead.last_contact_at).toLocaleString('ko-KR');
+
+        return [
+          lead.lead_id,
+          lead.name,
+          lead.primary_phone,
+          lead.status,
+          lead.utm_source,
+          formattedDate,
+          lead.score.toString(),
+          priorityInfo.priority,
+          lead.communication_count.toString(),
+          lead.assignee_name,
+          lead.sla_status
+        ].map(field => `"${field}"`).join(',');
+      });
+
+      // CSV 문자열 생성 (UTF-8 BOM 추가로 한글 깨짐 방지)
+      const csvContent = '\uFEFF' + [headers.join(','), ...csvRows].join('\n');
+
+      // Blob 생성
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // 다운로드 링크 생성
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      // 현재 날짜를 파일명에 포함
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `leads_export_${today}.csv`;
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+
+      // 다운로드 실행
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      console.log(`CSV exported: ${allLeads.length} leads`);
+    } catch (err) {
+      console.error('CSV export failed:', err);
+      alert('CSV 내보내기에 실패했습니다. 다시 시도해주세요.');
+    }
+  }, []);
+
+  // 채널별 캠페인 목록 로드
+  const loadCampaignsForChannel = useCallback((channel: string) => {
+    if (typeof window !== 'undefined') {
+      const storedCampaigns = localStorage.getItem('mcrm_campaign_costs');
+      if (storedCampaigns) {
+        const campaigns = JSON.parse(storedCampaigns);
+        const channelCampaigns = campaigns
+          .filter((c: any) => c.channel === channel)
+          .map((c: any) => c.campaign);
+        setAvailableCampaigns(channelCampaigns);
+
+        // 첫 번째 캠페인을 기본값으로 설정
+        if (channelCampaigns.length > 0) {
+          setNewLead(prev => ({
+            ...prev,
+            utm_campaign: channelCampaigns[0]
+          }));
+        } else {
+          setNewLead(prev => ({
+            ...prev,
+            utm_campaign: ''
+          }));
+        }
+      } else {
+        setAvailableCampaigns([]);
+        setNewLead(prev => ({
+          ...prev,
+          utm_campaign: ''
+        }));
+      }
+    }
+  }, []);
+
+  // 채널 관리 API에서 활성 채널 목록 가져오기
+  const fetchChannels = useCallback(async () => {
+    try {
+      const response = await api.get('/api/channel-management/mappings');
+      // active한 채널의 display_name만 추출
+      const activeChannels = response.data
+        .filter((mapping: any) => mapping.active)
+        .map((mapping: any) => mapping.display_name);
+      setAvailableChannels(activeChannels);
+    } catch (error) {
+      console.error('Failed to fetch channels:', error);
+      // 실패 시 기본 채널 목록 사용
+      setAvailableChannels(['Google Ads', 'Facebook Ads', 'Naver Ads', 'Instagram', 'YouTube']);
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 채널 목록 로드
+  useEffect(() => {
+    fetchChannels();
+  }, [fetchChannels]);
+
+  const handleNewLeadChange = useCallback((field: keyof NewLead, value: string | number) => {
+    setNewLead(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  // 인입경로 체크박스 토글
+  const handleToggleChannel = useCallback((channel: string) => {
+    setNewLead(prev => {
+      const currentChannels = prev.utm_source;
+      if (currentChannels.includes(channel)) {
+        return {
+          ...prev,
+          utm_source: currentChannels.filter(c => c !== channel)
+        };
+      } else {
+        return {
+          ...prev,
+          utm_source: [...currentChannels, channel]
+        };
+      }
+    });
+  }, []);
+
+  // 문의서비스 체크박스 토글
+  const handleToggleService = useCallback((service: string) => {
+    setNewLead(prev => {
+      const currentServices = prev.treatment;
+      if (currentServices.includes(service)) {
+        return {
+          ...prev,
+          treatment: currentServices.filter(s => s !== service)
+        };
+      } else {
+        return {
+          ...prev,
+          treatment: [...currentServices, service]
+        };
+      }
+    });
   }, []);
 
   const handleAddLeadClick = useCallback(() => {
-    alert('새 리드 생성 페이지/모달 열기'); // 실제 새 리드 생성 페이지 또는 모달 로직으로 교체 필요
-  }, []);
+    // 모달을 열 때마다 최신 담당자 목록 업데이트
+    setAvailableAssignees(getAvailableAssignees());
+    setAddLeadModalOpen(true);
+  }, [getAvailableAssignees]);
+
+  const handleCloseAddLeadModal = useCallback(() => {
+    setAddLeadModalOpen(false);
+    setNewLead({
+      name: '',
+      primary_phone: '',
+      status: '신규',
+      utm_source: [], // 인입경로 초기값 (빈 배열)
+      utm_campaign: '',
+      score: 50,
+      assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
+      revenue: 0,
+      treatment: [], // 문의서비스 초기값 (빈 배열)
+      consultation_notes: ''
+    });
+    setAvailableCampaigns([]);
+  }, [user?.name]);
+
+  const handleSaveNewLead = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Mock implementation for development
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+
+      // localStorage에서 기존 리드 목록 가져와서 ID 생성 (클라이언트에서만)
+      let existingLeads: Lead[] = [];
+
+      if (typeof window !== 'undefined') {
+        const storedLeads = localStorage.getItem('mcrm_leads');
+        if (storedLeads) {
+          existingLeads = JSON.parse(storedLeads);
+        }
+      }
+
+      // 새 리드 ID 생성 (기존 리드 개수 + 1)
+      const newLeadId = `lead_${String(existingLeads.length + 1).padStart(3, '0')}`;
+
+      // 새 리드 객체 생성
+      const createdLead: Lead = {
+        lead_id: newLeadId,
+        name: newLead.name,
+        primary_phone: newLead.primary_phone.includes('****')
+          ? newLead.primary_phone
+          : newLead.primary_phone.replace(/(\d{3})-(\d{4})-(\d{4})/, '$1-****-$3'),
+        status: newLead.status,
+        utm_source: newLead.utm_source,
+        utm_campaign: newLead.utm_campaign,
+        last_contact_at: new Date().toISOString(),
+        score: newLead.score,
+        assignee_name: newLead.assignee_name,
+        sla_status: '정상',
+        communication_count: 0,
+        revenue: newLead.revenue,
+        treatment: newLead.treatment,
+        consultation_notes: newLead.consultation_notes
+      };
+
+      console.log('New lead created:', createdLead);
+
+      // 새 리드를 기존 목록에 추가
+      const updatedLeads = [...existingLeads, createdLead];
+
+      // localStorage에 업데이트된 목록 저장 (클라이언트에서만)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
+      }
+
+      // 리드 목록 새로고침
+      fetchLeads();
+
+      // 모달 닫기
+      handleCloseAddLeadModal();
+
+      alert('새 리드가 성공적으로 등록되었습니다!');
+    } catch (err) {
+      console.error('Failed to create new lead:', err);
+      alert('리드 등록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  }, [newLead, fetchLeads, handleCloseAddLeadModal]);
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Leads List
+        문의 목록
       </Typography>
 
-      {loading && <Typography>Loading leads...</Typography>}
+      {loading && <Typography>문의 불러오는 중...</Typography>}
       {error && <Typography color="error">{error}</Typography>}
 
       <LeadListTable
@@ -108,6 +700,144 @@ export default function LeadsPage() {
         onFilterClick={handleFilterClick}
         onExportClick={handleExportClick}
         onAddLeadClick={handleAddLeadClick}
+      />
+
+      {/* 새 문의 등록 모달 */}
+      <Dialog open={addLeadModalOpen} onClose={handleCloseAddLeadModal} maxWidth="sm" fullWidth>
+        <DialogTitle>새 문의 등록</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="업체명"
+              value={newLead.name}
+              onChange={(e) => handleNewLeadChange('name', e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="전화번호"
+              value={newLead.primary_phone}
+              onChange={(e) => handleNewLeadChange('primary_phone', e.target.value)}
+              placeholder="010-1234-5678"
+              fullWidth
+              required
+            />
+            <FormControl fullWidth>
+              <InputLabel>상태</InputLabel>
+              <Select
+                value={newLead.status}
+                label="상태"
+                onChange={(e) => handleNewLeadChange('status', e.target.value)}
+              >
+                <MenuItem value="신규">신규</MenuItem>
+                <MenuItem value="상담완료">상담완료</MenuItem>
+                <MenuItem value="미팅완료">미팅완료</MenuItem>
+                <MenuItem value="계약완료">계약완료</MenuItem>
+                <MenuItem value="보류">보류</MenuItem>
+                <MenuItem value="거절">거절</MenuItem>
+              </Select>
+            </FormControl>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>인입경로 (다중 선택 가능)</Typography>
+              <FormGroup>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                  {availableChannels.map((channel) => (
+                    <FormControlLabel
+                      key={channel}
+                      control={
+                        <Checkbox
+                          checked={newLead.utm_source.includes(channel)}
+                          onChange={() => handleToggleChannel(channel)}
+                        />
+                      }
+                      label={channel}
+                    />
+                  ))}
+                </Box>
+              </FormGroup>
+            </Box>
+            <TextField
+              label="스코어 (우선순위 자동 계산)"
+              type="number"
+              value={newLead.score}
+              onChange={(e) => handleNewLeadChange('score', parseInt(e.target.value) || 0)}
+              inputProps={{ min: 0, max: 100 }}
+              fullWidth
+              helperText="0-50: 일반응대 | 51-70: 우선 응대 | 71-85: 매우 우선응대 | 86-100: 최우선 응대"
+            />
+            <FormControl fullWidth>
+              <InputLabel>담당자</InputLabel>
+              <Select
+                value={newLead.assignee_name}
+                label="담당자"
+                onChange={(e) => handleNewLeadChange('assignee_name', e.target.value)}
+              >
+                {availableAssignees.map((assignee) => (
+                  <MenuItem key={assignee.user_id} value={assignee.name}>
+                    {assignee.name} ({assignee.role})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>문의서비스 (다중 선택 가능)</Typography>
+              <FormGroup>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                  {['CI(간판)', '온라인마케팅', '오프라인마케팅', '웹사이트', 'LED', '인쇄물디자인'].map((service) => (
+                    <FormControlLabel
+                      key={service}
+                      control={
+                        <Checkbox
+                          checked={newLead.treatment.includes(service)}
+                          onChange={() => handleToggleService(service)}
+                        />
+                      }
+                      label={service}
+                    />
+                  ))}
+                </Box>
+              </FormGroup>
+            </Box>
+            <TextField
+              label="예상 매출 (원)"
+              type="number"
+              value={newLead.revenue}
+              onChange={(e) => handleNewLeadChange('revenue', parseInt(e.target.value) || 0)}
+              inputProps={{ min: 0 }}
+              fullWidth
+              helperText="예상되는 매출 금액을 입력하세요"
+            />
+            <TextField
+              label="상담 메모"
+              value={newLead.consultation_notes}
+              onChange={(e) => handleNewLeadChange('consultation_notes', e.target.value)}
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="상담 내용이나 특이사항을 입력하세요"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAddLeadModal}>취소</Button>
+          <Button
+            onClick={handleSaveNewLead}
+            variant="contained"
+            disabled={!newLead.name || !newLead.primary_phone}
+          >
+            등록
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 필터 드로어 */}
+      <LeadFilterDrawer
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApplyFilters={handleApplyFilters}
+        availableStatuses={['문의중', '상담완료', '미팅완료', '계약완료', '보류']}
+        availableChannels={availableChannels}
+        availableAssignees={availableAssignees}
       />
     </Box>
   );

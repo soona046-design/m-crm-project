@@ -3,7 +3,7 @@ import Pusher from 'pusher-js';
 
 declare global {
   interface Window {
-    Echo: Echo;
+    Echo: Echo<any>;
     Pusher: typeof Pusher;
   }
 }

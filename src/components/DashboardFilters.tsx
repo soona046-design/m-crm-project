@@ -1,10 +1,10 @@
 import React from 'react';
-import { Box, Grid, TextField, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
+import { Box, TextField, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
 
 interface DashboardFiltersProps {
   startDate: Date | null;
@@ -36,15 +36,15 @@ export default function DashboardFilters({
   agents,
 }: DashboardFiltersProps) {
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
       <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={2}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <DatePicker
               label="시작일"
-              value={startDate}
-              onChange={onStartDateChange}
-              format="yyyy-MM-dd"
+              value={startDate ? dayjs(startDate) : null}
+              onChange={(newValue) => onStartDateChange(newValue ? newValue.toDate() : null)}
+              format="YYYY-MM-DD"
               slotProps={{
                 textField: {
                   fullWidth: true,
@@ -52,13 +52,13 @@ export default function DashboardFilters({
                 }
               }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <DatePicker
               label="종료일"
-              value={endDate}
-              onChange={onEndDateChange}
-              format="yyyy-MM-dd"
+              value={endDate ? dayjs(endDate) : null}
+              onChange={(newValue) => onEndDateChange(newValue ? newValue.toDate() : null)}
+              format="YYYY-MM-DD"
               slotProps={{
                 textField: {
                   fullWidth: true,
@@ -66,8 +66,8 @@ export default function DashboardFilters({
                 }
               }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <FormControl fullWidth size="small">
               <InputLabel id="clinic-select-label">지점</InputLabel>
               <Select
@@ -85,8 +85,8 @@ export default function DashboardFilters({
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <FormControl fullWidth size="small">
               <InputLabel id="agent-select-label">상담원</InputLabel>
               <Select
@@ -104,8 +104,8 @@ export default function DashboardFilters({
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <Button
               variant="contained"
               fullWidth
@@ -114,8 +114,8 @@ export default function DashboardFilters({
             >
               필터 적용
             </Button>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: '45%', md: '15%' } }}>
             <Button
               variant="outlined"
               fullWidth
@@ -124,8 +124,8 @@ export default function DashboardFilters({
             >
               필터 초기화
             </Button>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
     </LocalizationProvider>
   );

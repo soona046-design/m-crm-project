@@ -118,13 +118,26 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     >
       {user ? (
         <>
-          <MenuItem onClick={handleMenuClose}>
+          <MenuItem onClick={handleMenuClose} disabled>
             <Typography variant="body2" color="textSecondary">
               {user.login_id} ({user.name})
             </Typography>
           </MenuItem>
-          <MenuItem onClick={handleMenuClose}>내 계정</MenuItem>
-          <MenuItem onClick={handleLogout}>로그아웃</MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); window.location.href = '/profiles'; }}>
+            내 계정
+          </MenuItem>
+          <MenuItem
+            onClick={handleLogout}
+            sx={{
+              color: 'error.main',
+              '&:hover': {
+                backgroundColor: 'error.light',
+                color: 'error.contrastText'
+              }
+            }}
+          >
+            로그아웃
+          </MenuItem>
         </>
       ) : (
         <MenuItem onClick={() => window.location.href = '/login'}>
@@ -175,7 +188,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         >
           <AccountCircle />
         </IconButton>
-        <p>프로필</p>
+        <p>{user ? `${user.name}님` : '로그인'}</p>
       </MenuItem>
     </Menu>
   );
@@ -211,7 +224,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           />
         </Search>
         <Box sx={{ flexGrow: 1 }} />
-        <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
           <IconButton size="large" aria-label="show notifications" color="inherit">
             <Badge badgeContent={4} color="error">
               <NotificationsIcon />
@@ -220,19 +233,44 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           <IconButton size="large" aria-label="show help" color="inherit">
             <HelpOutlineIcon />
           </IconButton>
-          <Tooltip title={user ? `${user.name} (${user.login_id})` : '로그인'}>
+
+          {/* 로그인 상태에 따른 환영 메시지와 버튼 */}
+          {user ? (
+            <>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'inherit',
+                  mr: 2,
+                  display: { xs: 'none', lg: 'block' } // 큰 화면에서만 표시
+                }}
+              >
+                {user.name}님 환영합니다
+              </Typography>
+              <Tooltip title={`${user.name} (${user.login_id})`}>
+                <IconButton
+                  size="large"
+                  aria-label="account of current user"
+                  aria-controls={menuId}
+                  aria-haspopup="true"
+                  onClick={handleProfileMenuOpen}
+                  color="inherit"
+                >
+                  <AccountCircle />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
             <IconButton
               size="large"
-              edge="end"
-              aria-label="account of current user"
-              aria-controls={menuId}
-              aria-haspopup="true"
-              onClick={handleProfileMenuOpen}
+              aria-label="login"
+              onClick={() => window.location.href = '/login'}
               color="inherit"
+              sx={{ ml: 1 }}
             >
               <AccountCircle />
             </IconButton>
-          </Tooltip>
+          )}
         </Box>
         <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
           <IconButton

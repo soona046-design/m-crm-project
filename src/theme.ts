@@ -1,20 +1,7 @@
 import { createTheme } from '@mui/material/styles';
-import { Noto_Sans_KR, Lato } from 'next/font/google'; // Pretendard 대신 Noto Sans KR 사용 예시
 
-// Pretendard 폰트 대신 Google Fonts의 Noto Sans KR을 사용합니다.
-// 로컬 폰트 설정이 복잡하므로, 일단 Google Fonts로 대체합니다.
-const notoSansKR = Noto_Sans_KR({
-  weight: ['300', '400', '500', '700'],
-  subsets: ['latin'],
-  display: 'swap',
-});
-
-// Lato 폰트 설정
-const lato = Lato({
-  weight: ['300', '400', '700'],
-  subsets: ['latin'],
-  display: 'swap',
-});
+// 임시로 시스템 폰트 사용 (Google Fonts 연결 문제로 인한 지연 해결)
+// 나중에 안정적인 폰트 로딩 방식으로 개선 예정
 
 
 // Material UI 테마 정의
@@ -41,7 +28,7 @@ const theme = createTheme({
     divider: '#E0E3E7', // Outline
   },
   typography: {
-    fontFamily: [notoSansKR.style.fontFamily, lato.style.fontFamily, 'sans-serif'].join(','),
+    fontFamily: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Segoe UI', 'Roboto', 'sans-serif'].join(','),
     h1: { // Display (대시보드 KPI)
       fontSize: '32px',
       lineHeight: '40px',

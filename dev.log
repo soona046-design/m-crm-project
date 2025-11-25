@@ -1,0 +1,120 @@
+
+> m-crm-project@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1236ms
+ ✓ Compiled /src/middleware in 233ms (72 modules)
+Middleware processing: /dashboards/channel-pivot
+ ○ Compiling /dashboards/channel-pivot ...
+ ✓ Compiled /dashboards/channel-pivot in 5.1s (2912 modules)
+ GET /dashboards/channel-pivot 200 in 5524ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 2.4s (1544 modules)
+ GET /favicon.ico 200 in 2457ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 240ms
+ GET /favicon.ico 200 in 8ms
+Middleware processing: /
+ ○ Compiling / ...
+ ✓ Compiled / in 568ms (2952 modules)
+ GET / 200 in 676ms
+ GET /favicon.ico 200 in 21ms
+Middleware processing: /dashboards
+ ✓ Compiled /dashboards in 365ms (2972 modules)
+Middleware processing: /dashboards
+ GET /favicon.ico 200 in 18ms
+Middleware processing: /dashboards/agent-performance
+ ○ Compiling /dashboards/agent-performance ...
+ ✓ Compiled /dashboards/agent-performance in 1525ms (3438 modules)
+Middleware processing: /dashboards/agent-performance
+ GET /favicon.ico 200 in 7ms
+ GET /favicon.ico 200 in 4ms
+Middleware processing: /dashboards/channel-pivot
+Middleware processing: /dashboards/channel-pivot
+ GET /favicon.ico 200 in 8ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 375ms
+ GET /favicon.ico 200 in 13ms
+Middleware processing: /
+Middleware processing: /
+ GET /favicon.ico 200 in 23ms
+Middleware processing: /tickets
+ ○ Compiling /tickets ...
+ ✓ Compiled /tickets in 2.2s (3503 modules)
+Middleware processing: /tickets
+ GET /favicon.ico 200 in 17ms
+Middleware processing: /leads
+ ○ Compiling /leads ...
+ ✓ Compiled /leads in 1811ms (3569 modules)
+Middleware processing: /leads
+ GET /favicon.ico 200 in 18ms
+Middleware processing: /dashboards
+ ○ Compiling /dashboards ...
+ ✓ Compiled /dashboards in 840ms (1841 modules)
+Middleware processing: /dashboards
+ ✓ Compiled /favicon.ico in 497ms (1873 modules)
+ GET /favicon.ico 200 in 572ms
+Middleware processing: /dashboards/channel-pivot
+ GET /favicon.ico 200 in 9ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 319ms
+ GET /favicon.ico 200 in 15ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 125ms
+ GET /favicon.ico 200 in 10ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 48ms
+ GET /favicon.ico 200 in 6ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 38ms
+ GET /favicon.ico 200 in 3ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 79ms
+ GET /favicon.ico 200 in 40ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 32ms
+ GET /favicon.ico 200 in 7ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 43ms
+ GET /favicon.ico 200 in 11ms
+Middleware processing: /dashboards/channel-pivot
+ GET /dashboards/channel-pivot 200 in 32ms
+ GET /favicon.ico 200 in 7ms
+Middleware processing: /dashboards
+Middleware processing: /dashboards
+ GET /favicon.ico 200 in 3ms
+Middleware processing: /dashboards/agent-performance
+Middleware processing: /dashboards/agent-performance
+ GET /favicon.ico 200 in 7ms
+ GET /favicon.ico 200 in 8ms
+Middleware processing: /dashboards/funnel
+ ○ Compiling /dashboards/funnel ...
+ ✓ Compiled /dashboards/funnel in 2.1s (3602 modules)
+Middleware processing: /dashboards/funnel
+ GET /favicon.ico 200 in 14ms
+Middleware processing: /leads
+Middleware processing: /leads
+ GET /favicon.ico 200 in 6ms
+Middleware processing: /tickets
+Middleware processing: /tickets
+ GET /favicon.ico 200 in 7ms
+Middleware processing: /appointments
+ ○ Compiling /appointments ...
+ ✓ Compiled /appointments in 883ms (3616 modules)
+Middleware processing: /channels
+ ○ Compiling /channels ...
+ ✓ Compiled /channels in 766ms (3642 modules)
+Middleware processing: /channels
+ GET /favicon.ico 200 in 11ms
+Middleware processing: /trash
+ ○ Compiling /trash ...
+ ✓ Compiled /trash in 840ms (3654 modules)
+Middleware processing: /trash
+ GET /favicon.ico 200 in 11ms
+ GET /favicon.ico 200 in 7ms
+[?25h

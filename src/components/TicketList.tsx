@@ -17,7 +17,7 @@ interface TicketListProps {
   onTicketSelect?: (ticketId: string) => void; // 티켓 클릭 시 상세 보기 등의 액션
 }
 
-const SLABanner = styled(Box)<{ slaStatus: SLATimer['status'] }>(({ theme, slaStatus }) => ({
+const SLABanner = styled(Box)<{ slaStatus: 'normal' | 'warning' | 'violated' }>(({ theme, slaStatus }) => ({
   padding: theme.spacing(1),
   textAlign: 'center',
   color: theme.palette.common.white,

@@ -74,27 +74,7 @@ export default function AgentPerformanceDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      // localStorage에서 리드 데이터 가져오기
-      let leadsData: any[] = [];
-      if (typeof window !== 'undefined') {
-        const storedLeads = localStorage.getItem('mcrm_leads');
-        if (storedLeads) {
-          leadsData = JSON.parse(storedLeads);
-        }
-      }
-
-      // 담당자별 매출 집계
-      const agentStats: { [key: string]: { revenue: number; count: number } } = {};
-      leadsData.forEach((lead: any) => {
-        const assignee = lead.assignee_name || '미배정';
-        if (!agentStats[assignee]) {
-          agentStats[assignee] = { revenue: 0, count: 0 };
-        }
-        agentStats[assignee].revenue += lead.revenue || 0;
-        agentStats[assignee].count += 1;
-      });
-
-      // Mock data for development (실제 리드 데이터의 매출 반영)
+      // Mock data for development
       const mockAgentPerformance: AgentPerformanceData[] = [
         {
           user_id: '1',
@@ -106,7 +86,7 @@ export default function AgentPerformanceDashboardPage() {
           sla_violation_rate: 5.2,
           total_appointments: 28,
           total_clinic_visits: 22,
-          total_revenue: agentStats['김상담']?.revenue || 3300000,
+          total_revenue: 3300000,
           email: 'kim.agent@clinic.com',
           role: '상담매니저',
           clinic_id: 'clinic1',
@@ -122,7 +102,7 @@ export default function AgentPerformanceDashboardPage() {
           sla_violation_rate: 3.1,
           total_appointments: 25,
           total_clinic_visits: 21,
-          total_revenue: agentStats['이상담']?.revenue || 3150000,
+          total_revenue: 3150000,
           email: 'lee.agent@clinic.com',
           role: '상담매니저',
           clinic_id: 'clinic1',
@@ -138,7 +118,7 @@ export default function AgentPerformanceDashboardPage() {
           sla_violation_rate: 7.8,
           total_appointments: 32,
           total_clinic_visits: 24,
-          total_revenue: agentStats['박상담']?.revenue || 3600000,
+          total_revenue: 3600000,
           email: 'park.agent@clinic.com',
           role: '상담매니저',
           clinic_id: 'clinic2',
@@ -453,7 +433,7 @@ export default function AgentPerformanceDashboardPage() {
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        상담원 성과 대시보드
+        Agent Performance Dashboard
       </Typography>
 
       <DashboardFilters
@@ -478,7 +458,7 @@ export default function AgentPerformanceDashboardPage() {
         <Grid container spacing={3}>
           {/* Top KPI Cards */}
           <Grid item xs={12} sm={6} md={3}>
-            <KpiCard title="평균 응답속도" value={formatDuration(avgResponseTime)} icon={<AccessTimeIcon />} color="#1E88E5" />
+            <KpiCard title="평균 응답 시간" value={formatDuration(avgResponseTime)} icon={<AccessTimeIcon />} color="#1E88E5" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <KpiCard title="평균 내원 전환율" value={formatPercentage(avgConversionRate)} icon={<TrendingUpIcon />} color="#4CAF50" />
@@ -487,21 +467,21 @@ export default function AgentPerformanceDashboardPage() {
             <KpiCard title="평균 SLA 위반율" value={formatPercentage(avgSlaViolationRate)} icon={<ErrorOutlineIcon />} color="#EF5350" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <KpiCard title="총 상담자 수" value={totalAgents.toLocaleString()} icon={<PeopleAltIcon />} color="#FFA726" />
+            <KpiCard title="총 상담원 수" value={totalAgents.toLocaleString()} icon={<PeopleAltIcon />} color="#FFA726" />
           </Grid>
 
           {/* Agent Performance Table */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>개별 상담자 성과</Typography>
+              <Typography variant="h6" gutterBottom>Individual Agent Performance</Typography>
               {agentPerformance.length > 0 ? (
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>상담자</TableCell>
-                        <TableCell align="right">총 상담 건</TableCell>
-                        <TableCell align="right">평균 응답속도</TableCell>
+                        <TableCell>상담원</TableCell>
+                        <TableCell align="right">총 상담</TableCell>
+                        <TableCell align="right">평균 응답 시간</TableCell>
                         <TableCell align="right">내원 전환율</TableCell>
                         <TableCell align="right">SLA 위반율</TableCell>
                         <TableCell align="right">총 예약</TableCell>
@@ -526,7 +506,7 @@ export default function AgentPerformanceDashboardPage() {
                   </Table>
                 </TableContainer>
               ) : (
-                <Typography variant="body1" color="text.secondary">상담자 성과 데이터가 없습니다.</Typography>
+                <Typography variant="body1" color="text.secondary">No agent performance data available.</Typography>
               )}
             </Paper>
           </Grid>
@@ -535,9 +515,9 @@ export default function AgentPerformanceDashboardPage() {
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" gutterBottom>사용자 관리</Typography>
+                <Typography variant="h6" gutterBottom>Manage Users</Typography>
                 <Button variant="contained" onClick={() => { setCurrentUser(null); setOpenUserModal(true); }}>
-                  새 사용자 추가
+                  Add New User
                 </Button>
               </Box>
               
@@ -549,13 +529,13 @@ export default function AgentPerformanceDashboardPage() {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>이름</TableCell>
-                        <TableCell>이메일</TableCell>
-                        <TableCell>역할</TableCell>
-                        <TableCell>지점 ID</TableCell>
-                        <TableCell>전화번호</TableCell>
-                        <TableCell>활성화</TableCell>
-                        <TableCell align="right">작업</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Role</TableCell>
+                        <TableCell>Clinic ID</TableCell>
+                        <TableCell>Phone</TableCell>
+                        <TableCell>Active</TableCell>
+                        <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -566,10 +546,10 @@ export default function AgentPerformanceDashboardPage() {
                           <TableCell>{user.role}</TableCell>
                           <TableCell>{user.clinic_id ?? 'N/A'}</TableCell>
                           <TableCell>{user.phone ?? 'N/A'}</TableCell>
-                          <TableCell>{user.active ? '예' : '아니오'}</TableCell>
+                          <TableCell>{user.active ? 'Yes' : 'No'}</TableCell>
                           <TableCell align="right">
-                            <Button size="small" onClick={() => { setCurrentUser(user); setOpenUserModal(true); }}>수정</Button>
-                            <Button size="small" color="error" onClick={() => handleDeleteUser(user.user_id)} sx={{ ml: 1 }}>삭제</Button>
+                            <Button size="small" onClick={() => { setCurrentUser(user); setOpenUserModal(true); }}>Edit</Button>
+                            <Button size="small" color="error" onClick={() => handleDeleteUser(user.user_id)} sx={{ ml: 1 }}>Delete</Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -577,20 +557,20 @@ export default function AgentPerformanceDashboardPage() {
                   </Table>
                 </TableContainer>
               ) : (
-                !userLoading && !userError && <Typography variant="body1" color="text.secondary">사용자 데이터가 없습니다.</Typography>
+                !userLoading && !userError && <Typography variant="body1" color="text.secondary">No user data available.</Typography>
               )}
             </Paper>
           </Grid>
 
           {/* User Add/Edit Modal */}
           <Dialog open={openUserModal} onClose={() => setOpenUserModal(false)}>
-            <DialogTitle>{currentUser ? '사용자 수정' : '새 사용자 추가'}</DialogTitle>
+            <DialogTitle>{currentUser ? 'Edit User' : 'Add New User'}</DialogTitle>
             <DialogContent>
               <TextField
                 autoFocus
                 margin="dense"
                 id="name"
-                label="이름"
+                label="Name"
                 type="text"
                 fullWidth
                 variant="outlined"
@@ -601,7 +581,7 @@ export default function AgentPerformanceDashboardPage() {
               <TextField
                 margin="dense"
                 id="email"
-                label="이메일"
+                label="Email"
                 type="email"
                 fullWidth
                 variant="outlined"
@@ -624,34 +604,32 @@ export default function AgentPerformanceDashboardPage() {
               <TextField
                 margin="dense"
                 id="password"
-                label="비밀번호"
+                label="Password"
                 type="password"
                 fullWidth
                 variant="outlined"
                 sx={{ mb: 2 }}
-                placeholder={currentUser ? '변경하지 않으려면 비워두세요' : ''}
+                placeholder={currentUser ? 'Leave blank to keep current password' : ''}
                 onChange={(e) => setCurrentUser({ ...currentUser, password: e.target.value } as AgentPerformanceData)}
               />
               <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
-                <InputLabel id="role-label">역할</InputLabel>
+                <InputLabel id="role-label">Role</InputLabel>
                 <Select
                   labelId="role-label"
                   id="role"
-                  value={currentUser?.role || '상담매니저'} // Default role
-                  label="역할"
+                  value={currentUser?.role || 'agent'} // Default role
+                  label="Role"
                   onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value } as AgentPerformanceData)}
                 >
-                  <MenuItem value="슈퍼관리자">슈퍼관리자</MenuItem>
-                  <MenuItem value="지점관리자">지점관리자</MenuItem>
-                  <MenuItem value="상담매니저">상담매니저</MenuItem>
-                  <MenuItem value="마케터">마케터</MenuItem>
-                  <MenuItem value="의사">의사</MenuItem>
+                  <MenuItem value="admin">Admin</MenuItem>
+                  <MenuItem value="agent">Agent</MenuItem>
+                  <MenuItem value="client">Client</MenuItem>
                 </Select>
               </FormControl>
               <TextField
                 margin="dense"
                 id="clinic_id"
-                label="지점 ID"
+                label="Clinic ID (UUID)"
                 type="text"
                 fullWidth
                 variant="outlined"
@@ -662,7 +640,7 @@ export default function AgentPerformanceDashboardPage() {
               <TextField
                 margin="dense"
                 id="phone"
-                label="전화번호"
+                label="Phone"
                 type="text"
                 fullWidth
                 variant="outlined"
@@ -671,22 +649,22 @@ export default function AgentPerformanceDashboardPage() {
                 sx={{ mb: 2 }}
               />
               <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
-                <InputLabel id="active-label">활성화</InputLabel>
+                <InputLabel id="active-label">Active</InputLabel>
                 <Select
                   labelId="active-label"
                   id="active"
                   value={currentUser?.active === false ? 'false' : 'true'} // Default active
-                  label="활성화"
+                  label="Active"
                   onChange={(e) => setCurrentUser({ ...currentUser, active: e.target.value === 'true' } as AgentPerformanceData)}
                 >
-                  <MenuItem value="true">예</MenuItem>
-                  <MenuItem value="false">아니오</MenuItem>
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
                 </Select>
               </FormControl>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenUserModal(false)}>취소</Button>
-              <Button onClick={handleAddOrUpdateUser} variant="contained">{currentUser ? '수정' : '추가'}</Button>
+              <Button onClick={() => setOpenUserModal(false)}>Cancel</Button>
+              <Button onClick={handleAddOrUpdateUser} variant="contained">{currentUser ? 'Update' : 'Add'}</Button>
             </DialogActions>
           </Dialog>
 

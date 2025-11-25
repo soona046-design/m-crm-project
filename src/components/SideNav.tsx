@@ -18,15 +18,21 @@ import ShareIcon from '@mui/icons-material/Share'; // Channels
 import PersonIcon from '@mui/icons-material/Person'; // Profiles
 import SettingsIcon from '@mui/icons-material/Settings';
 import EventNoteIcon from '@mui/icons-material/EventNote'; // Audit
+import DeleteIcon from '@mui/icons-material/Delete'; // Trash
+import ScienceIcon from '@mui/icons-material/Science'; // Test
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Channel Pivot Analytics
+import CategoryIcon from '@mui/icons-material/Category'; // Channel Management
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Box, Tooltip } from '@mui/material';
+import { Box, Tooltip, IconButton } from '@mui/material';
 import { alpha } from '@mui/material/styles'; // alpha 함수를 명시적으로 import
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 const drawerWidth = 240;
-const collapsedDrawerWidth = 72; // 태블릿 모드에서 GNB 접힘 너비
+const collapsedDrawerWidth = 72; // GNB 접힘 너비
 
 interface SideNavProps {
   mobileOpen: boolean;
@@ -34,32 +40,37 @@ interface SideNavProps {
   currentDrawerWidth: number; // AppShell에서 계산된 드로어 너비
   isMobile: boolean; // AppShell에서 계산된 모바일 여부
   isTablet: boolean; // AppShell에서 계산된 태블릿 여부
+  desktopCollapsed: boolean; // 데스크톱에서 GNB 접기 상태
+  onDesktopToggle: () => void; // 데스크톱에서 GNB 접기/펼치기
 }
 
-export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth, isMobile, isTablet }: SideNavProps) {
+export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth, isMobile, isTablet, desktopCollapsed, onDesktopToggle }: SideNavProps) {
   const pathname = usePathname();
   const theme = useTheme();
-  // const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md')); // AppShell에서 전달받으므로 제거
-  // const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // AppShell에서 전달받으므로 제거
 
-  const drawerVariant = isMobile ? 'temporary' : 'permanent'; // 태블릿이든 데스크톱이든 permanent
-  const drawerAnchor = 'left';
-  // const currentDrawerWidth = isTablet ? collapsedDrawerWidth : drawerWidth; // AppShell에서 전달받으므로 제거
+  const isCollapsed = isTablet || desktopCollapsed;
 
   const navItems = [
-    { text: 'Home', icon: <HomeIcon />, href: '/' },
-    { text: 'Leads', icon: <PeopleIcon />, href: '/leads' },
-    { text: 'Tickets', icon: <ConfirmationNumberIcon />, href: '/tickets' },
-    { text: 'Appointments', icon: <CalendarMonthIcon />, href: '/appointments' },
-    { text: 'Dashboards', icon: <DashboardIcon />, href: '/dashboards' },
-    { text: 'Channels', icon: <ShareIcon />, href: '/channels' },
-    { text: 'Profiles', icon: <PersonIcon />, href: '/profiles' },
-    { text: 'Settings', icon: <SettingsIcon />, href: '/settings' },
-    { text: 'Audit', icon: <EventNoteIcon />, href: '/audit' },
+    { text: '홈', icon: <HomeIcon />, href: '/' }, // 홈 대시보드
+    { text: '문의', icon: <PeopleIcon />, href: '/leads' },
+    { text: '상담', icon: <ConfirmationNumberIcon />, href: '/tickets' },
+    { text: '예약', icon: <CalendarMonthIcon />, href: '/appointments' },
+    { text: '대시보드', icon: <DashboardIcon />, href: '/dashboards' },
+    { text: '채널 피벗', icon: <AssessmentIcon />, href: '/dashboards/channel-pivot' },
+    { text: '테스트(채널피벗)', icon: <ScienceIcon />, href: '/dashboards/channel-pivot-test' },
+    { text: '채널', icon: <ShareIcon />, href: '/channels' },
+    { text: '채널 관리', icon: <CategoryIcon />, href: '/settings/channels' },
+    { text: '휴지통', icon: <DeleteIcon />, href: '/trash' },
+    { text: '프로필', icon: <PersonIcon />, href: '/profiles' },
+    { text: '설정', icon: <SettingsIcon />, href: '/settings' },
+    { text: '활동기록', icon: <EventNoteIcon />, href: '/audit' },
   ];
 
   const drawerContent = (
     <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
       overflow: 'auto',
       width: currentDrawerWidth,
       flexShrink: 0, // 너비가 줄어드는 것을 방지
@@ -70,9 +81,9 @@ export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth
     }}>
       <Toolbar /> {/* TopBar 높이만큼 여백 */}
       <Divider />
-      <List>
+      <List sx={{ flexGrow: 1 }}>
         {navItems.map((item) => (
-          <Tooltip title={isTablet ? item.text : ''} placement="right" key={item.text}>
+          <Tooltip title={isCollapsed ? item.text : ''} placement="right" key={item.text}>
             <ListItem disablePadding>
               <ListItemButton
                 component={Link}
@@ -92,18 +103,32 @@ export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth
                     backgroundColor: alpha(theme.palette.primary.main, 0.12),
                   },
                   minHeight: '48px', // 최소 높이 설정
-                  justifyContent: isTablet ? 'center' : 'flex-start', // 태블릿 모드에서 중앙 정렬
+                  justifyContent: isCollapsed ? 'center' : 'flex-start', // 접힘 모드에서 중앙 정렬
                 }}
               >
-                <ListItemIcon sx={{ minWidth: isTablet ? 'auto' : '40px', justifyContent: 'center' }}>
+                <ListItemIcon sx={{ minWidth: isCollapsed ? 'auto' : '40px', justifyContent: 'center' }}>
                   {item.icon}
                 </ListItemIcon>
-                {!isTablet && <ListItemText primary={item.text} sx={{ ml: 1 }} />}
+                {!isCollapsed && <ListItemText primary={item.text} sx={{ ml: 1 }} />}
               </ListItemButton>
             </ListItem>
           </Tooltip>
         ))}
       </List>
+
+      {/* 데스크톱에서만 토글 버튼 표시 (태블릿/모바일에서는 숨김) */}
+      {!isMobile && !isTablet && (
+        <>
+          <Divider />
+          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
+            <Tooltip title={desktopCollapsed ? "메뉴 펼치기" : "메뉴 접기"} placement="right">
+              <IconButton onClick={onDesktopToggle} size="small">
+                {desktopCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </>
+      )}
     </Box>
   );
 

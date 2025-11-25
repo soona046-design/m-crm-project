@@ -7,10 +7,10 @@ const nextConfig = {
     };
     return config;
   },
-  // Turbopack 설정
+  /**  Turbopack 설정
   turbopack: {
     root: __dirname,
-  },
+  },**/
 };
 
 module.exports = nextConfig;

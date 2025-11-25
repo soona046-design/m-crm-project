@@ -6,6 +6,7 @@ import RealtimeUpdates from '@/components/RealtimeUpdates';
 import axios from 'axios';
 import TicketList from '@/components/TicketList'; // TicketList 컴포넌트 import
 import ReplyPanel from '@/components/ReplyPanel'; // ReplyPanel 컴포넌트 import
+import { useRouter } from 'next/navigation'; // 라우팅을 위해 추가
 
 import { Ticket } from '@/types/ticket';
 
@@ -50,9 +51,9 @@ export default function TicketInboxPage() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null); // 선택된 티켓 ID 상태 추가
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);     // 선택된 리드 ID 상태 추가
 
+  const router = useRouter();
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    event.preventDefault();
-    event.stopPropagation();
     setCurrentTab(newValue);
   };
 
@@ -62,8 +63,7 @@ export default function TicketInboxPage() {
     if (selectedTicket) {
       setSelectedLeadId(selectedTicket.lead_id); // 선택된 리드의 lead_id 업데이트
     }
-    // 페이지 이동 대신 현재 페이지에서 티켓 선택 상태만 업데이트
-    // TODO: 나중에 티켓 상세 페이지가 필요하면 router.push(`/tickets/${ticketId}`) 추가
+    router.push(`/tickets/${ticketId}`); // TODO: 실제 티켓 상세 페이지로 이동 로직
   };
 
   const handleSendMessage = useCallback(async (message: string, channel: 'sms' | 'kakaotalk' | 'call', templateId?: string, recipient?: string, ticketId?: string | null) => {
@@ -104,9 +104,7 @@ export default function TicketInboxPage() {
     }
   }, [selectedLeadId, selectedTicketId]);
 
-  // 단축키 처리 - 임시로 비활성화 (네비게이션 문제 해결)
-  // TODO: 나중에 단축키가 필요하면 다시 활성화하되, 브라우저 기본 동작을 방해하지 않도록 수정
-  /*
+  // 단축키 처리
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) { // Ctrl 또는 Cmd 키와 함께
@@ -135,108 +133,123 @@ export default function TicketInboxPage() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []); // 의존성 배열 비워 단 한 번만 등록/해제
-  */
 
-  // localStorage에서 Tickets 데이터 가져오기
+  // TODO: 각 탭에 따른 필터링 로직 구현 필요
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
+      // Mock implementation for development
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
 
-      if (typeof window !== 'undefined') {
-        let allTickets: Ticket[] = [];
-        const storedTickets = localStorage.getItem('mcrm_tickets');
-
-        if (storedTickets) {
-          allTickets = JSON.parse(storedTickets);
-        } else {
-          // 초기 샘플 티켓 데이터 생성 (Lead와 연동)
-          const storedLeads = localStorage.getItem('mcrm_leads');
-          if (storedLeads) {
-            const leads = JSON.parse(storedLeads);
-            // 각 리드마다 티켓 생성 (처음 5개만)
-            allTickets = leads.slice(0, 5).map((lead: any, index: number) => {
-              const createdDate = new Date(lead.last_contact_at);
-              const slaDueAt = new Date(createdDate.getTime() + 4 * 60 * 60 * 1000); // 4시간 후
-              const now = new Date();
-              const remaining = Math.floor((slaDueAt.getTime() - now.getTime()) / (1000 * 60)); // 분 단위
-
-              return {
-                ticket_id: `ticket_${lead.lead_id}`,
-                lead_id: lead.lead_id,
-                lead_name: lead.name,
-                title: `${lead.utm_source} 채널 문의`,
-                notes: lead.consultation_notes || '상담 요청',
-                latest_message_preview: lead.consultation_notes || '문의 내용',
-                sla_timer: remaining > 0 ? {
-                  remaining: remaining,
-                  formatted: remaining > 60 ? `${Math.floor(remaining / 60)}시간 ${remaining % 60}분 남음` : `${remaining}분 남음`,
-                  status: remaining < 60 ? 'warning' : 'normal'
-                } : undefined,
-                sla_due_at: slaDueAt.toISOString(),
-                priority: lead.score >= 80 ? '긴급' : lead.score >= 60 ? '높음' : '일반',
-                assignee_id: lead.assignee_name,
-                assignee_name: lead.assignee_name,
-                state: index === 0 ? '완료' : index === 1 ? '진행' : '신규',
-                created_at: createdDate.toISOString(),
-                tags: [lead.utm_source],
-                last_contact_at: lead.last_contact_at,
-              } as Ticket;
-            });
-            localStorage.setItem('mcrm_tickets', JSON.stringify(allTickets));
-          }
+      // Mock tickets data
+      const mockTickets: Ticket[] = [
+        {
+          ticket_id: 'ticket_001',
+          lead_id: 'lead_001',
+          lead_name: '김환자',
+          title: '임플란트 상담 문의',
+          notes: '상담 예약 요청',
+          latest_message_preview: '안녕하세요, 임플란트 상담을 받고 싶습니다.',
+          sla_timer: {
+            remaining: 120,
+            formatted: '2시간 남음',
+            status: 'normal'
+          },
+          sla_due_at: '2025-09-29T18:00:00Z',
+          priority: '높음',
+          assignee_id: '1',
+          assignee_name: '김상담',
+          state: '진행',
+          created_at: '2025-09-29T08:00:00Z',
+          tags: ['임플란트', '상담'],
+          last_contact_at: '2025-09-29T09:00:00Z'
+        },
+        {
+          ticket_id: 'ticket_002',
+          lead_id: 'lead_002',
+          lead_name: '이환자',
+          title: 'SLA 임박 - 교정 문의',
+          notes: '교정 상담 요청',
+          latest_message_preview: '교정 치료 비용과 기간이 궁금합니다.',
+          sla_timer: {
+            remaining: 30,
+            formatted: '30분 남음',
+            status: 'warning'
+          },
+          sla_due_at: '2025-09-29T15:30:00Z',
+          priority: '긴급',
+          assignee_id: '2',
+          assignee_name: '이상담',
+          state: '진행',
+          created_at: '2025-09-29T10:00:00Z',
+          tags: ['교정', 'SLA임박'],
+          last_contact_at: '2025-09-29T11:00:00Z'
+        },
+        {
+          ticket_id: 'ticket_003',
+          lead_id: 'lead_003',
+          lead_name: '박환자',
+          title: '미응답 - 스케일링 예약',
+          notes: '스케일링 예약 요청 - 응답 대기',
+          latest_message_preview: '스케일링 예약 가능한 시간 문의드립니다.',
+          sla_timer: {
+            remaining: 240,
+            formatted: '4시간 남음',
+            status: 'normal'
+          },
+          sla_due_at: '2025-09-29T19:00:00Z',
+          priority: '일반',
+          assignee_id: '3',
+          assignee_name: '박상담',
+          state: '신규',
+          created_at: '2025-09-29T07:00:00Z',
+          tags: ['스케일링', '미응답']
+        },
+        {
+          ticket_id: 'ticket_004',
+          lead_id: 'lead_004',
+          lead_name: '최환자',
+          title: '완료 - 치아미백 상담',
+          notes: '치아미백 상담 완료',
+          latest_message_preview: '예약이 완료되었습니다. 감사합니다.',
+          priority: '일반',
+          assignee_id: '1',
+          assignee_name: '김상담',
+          state: '완료',
+          created_at: '2025-09-28T14:00:00Z',
+          tags: ['치아미백', '완료'],
+          last_contact_at: '2025-09-28T16:00:00Z'
         }
+      ];
 
-        // SLA 타이머 실시간 업데이트
-        allTickets = allTickets.map(ticket => {
-          if (ticket.sla_due_at && ticket.state !== '완료') {
-            const now = new Date();
-            const dueAt = new Date(ticket.sla_due_at);
-            const remaining = Math.floor((dueAt.getTime() - now.getTime()) / (1000 * 60));
-
-            return {
-              ...ticket,
-              sla_timer: {
-                remaining: remaining,
-                formatted: remaining > 0
-                  ? (remaining > 60 ? `${Math.floor(remaining / 60)}시간 ${remaining % 60}분 남음` : `${remaining}분 남음`)
-                  : 'SLA 초과',
-                status: remaining < 0 ? 'violated' : remaining < 60 ? 'warning' : 'normal'
-              }
-            };
-          }
-          return ticket;
-        });
-
-        // Filter tickets based on current tab
-        let filteredTickets = allTickets;
-        switch (currentTab) {
-          case 0: // 내 담당
-            filteredTickets = allTickets.filter(ticket =>
-              ticket.state !== '완료'
-            );
-            break;
-          case 1: // SLA 임박
-            filteredTickets = allTickets.filter(ticket =>
-              ticket.sla_timer?.status === 'warning' && ticket.state !== '완료'
-            );
-            break;
-          case 2: // 미응답
-            filteredTickets = allTickets.filter(ticket =>
-              ticket.state === '신규'
-            );
-            break;
-          case 3: // 완료
-            filteredTickets = allTickets.filter(ticket =>
-              ticket.state === '완료'
-            );
-            break;
-        }
-
-        console.log('Filtered tickets for tab', currentTab, ':', filteredTickets);
-        setTickets(filteredTickets);
+      // Filter tickets based on current tab
+      let filteredTickets = mockTickets;
+      switch (currentTab) {
+        case 0: // 내 담당
+          filteredTickets = mockTickets.filter(ticket =>
+            ticket.assignee_id === '1' && ticket.state !== '완료'
+          );
+          break;
+        case 1: // SLA 임박
+          filteredTickets = mockTickets.filter(ticket =>
+            ticket.sla_timer?.status === 'warning' && ticket.state !== '완료'
+          );
+          break;
+        case 2: // 미응답
+          filteredTickets = mockTickets.filter(ticket =>
+            ticket.state === '신규' && ticket.state !== '완료'
+          );
+          break;
+        case 3: // 완료
+          filteredTickets = mockTickets.filter(ticket =>
+            ticket.state === '완료'
+          );
+          break;
       }
+
+      console.log('Filtered tickets for tab', currentTab, ':', filteredTickets);
+      setTickets(filteredTickets);
     } catch (err) {
       console.error("Failed to fetch tickets:", err);
       setError("Failed to load tickets. Please try again.");
@@ -268,7 +281,7 @@ export default function TicketInboxPage() {
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        상담 인박스
+        Ticket Inbox
       </Typography>
       <RealtimeUpdates />
 
