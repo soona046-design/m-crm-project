@@ -5,8 +5,9 @@ import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ko } from 'date-fns/locale';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -808,7 +809,7 @@ export default function ChannelPivotDashboardPage() {
               조회 기간
             </Typography>
           </Box>
-          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
             <DatePicker
               label="시작일"
               value={startDate}
