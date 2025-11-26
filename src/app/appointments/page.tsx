@@ -125,7 +125,7 @@ export default function AppointmentsPage() {
             <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
               <DateCalendar
                 value={dayjs(selectedDate)} // dayjs 객체로 전달
-                onChange={(newValue) => setSelectedDate(newValue ? newValue.toDate() : null)} // Date 객체로 변환하여 저장
+                onChange={(newValue) => setSelectedDate(newValue ? (dayjs.isDayjs(newValue) ? newValue.toDate() : newValue) : null)} // Date 객체로 변환하여 저장
                 views={['day']}
                 // `DateCalendar`는 직접적인 주간/일간 뷰 전환 버튼을 제공하지 않으므로, 외부 버튼으로 제어
               />
