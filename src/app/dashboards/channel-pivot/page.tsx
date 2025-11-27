@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/ko';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -163,14 +163,11 @@ interface SummaryMetrics {
 export default function ChannelPivotDashboardPage() {
   // 날짜 범위 state (기본값: 최근 3개월)
   const getDefaultStartDate = () => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 2); // 3개월 전
-    date.setDate(1); // 해당 월의 첫날
-    return date;
+    return dayjs().subtract(2, 'month').startOf('month'); // 3개월 전 월초
   };
 
-  const [startDate, setStartDate] = useState<Date | null>(getDefaultStartDate());
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [startDate, setStartDate] = useState<Dayjs | null>(getDefaultStartDate());
+  const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
 
   const [channelPerformanceData, setChannelPerformanceData] = useState<ChannelPerformanceData[]>([]);
   const [categoryPerformanceData, setCategoryPerformanceData] = useState<CategoryPerformanceData[]>([]);
@@ -611,8 +608,8 @@ export default function ChannelPivotDashboardPage() {
     setError(null);
     try {
       // 날짜 범위 설정 (state에서 가져옴)
-      const startDateStr = startDate ? startDate.toISOString().split('T')[0] : new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1).toISOString().split('T')[0];
-      const endDateStr = endDate ? endDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const startDateStr = startDate ? startDate.format('YYYY-MM-DD') : dayjs().subtract(2, 'month').startOf('month').format('YYYY-MM-DD');
+      const endDateStr = endDate ? endDate.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
 
       console.log('Fetching from backend API', { startDate: startDateStr, endDate: endDateStr });
 
@@ -841,11 +838,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const lastWeek = new Date();
-                lastWeek.setDate(today.getDate() - 7);
-                setStartDate(lastWeek);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(7, 'day'));
+                setEndDate(dayjs());
               }}
             >
               최근 1주
@@ -854,11 +848,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const lastMonth = new Date();
-                lastMonth.setMonth(today.getMonth() - 1);
-                setStartDate(lastMonth);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(1, 'month'));
+                setEndDate(dayjs());
               }}
             >
               최근 1개월
@@ -867,12 +858,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const threeMonthsAgo = new Date();
-                threeMonthsAgo.setMonth(today.getMonth() - 2);
-                threeMonthsAgo.setDate(1);
-                setStartDate(threeMonthsAgo);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(2, 'month').startOf('month'));
+                setEndDate(dayjs());
               }}
             >
               최근 3개월
@@ -881,12 +868,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(today.getMonth() - 6);
-                sixMonthsAgo.setDate(1);
-                setStartDate(sixMonthsAgo);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(6, 'month').startOf('month'));
+                setEndDate(dayjs());
               }}
             >
               최근 6개월
@@ -894,7 +877,7 @@ export default function ChannelPivotDashboardPage() {
           </Box>
           {startDate && endDate && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-              {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))}일간의 데이터
+              {endDate.diff(startDate, 'day')}일간의 데이터
             </Typography>
           )}
         </Box>
