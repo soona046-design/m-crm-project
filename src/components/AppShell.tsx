@@ -52,7 +52,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <TopBar onMenuClick={handleDrawerToggle} />
+      <TopBar
+        onMenuClick={isMobile ? handleDrawerToggle : handleDesktopToggle}
+        isMobile={isMobile}
+      />
       <SideNav
         mobileOpen={mobileOpen}
         onDrawerToggle={handleDrawerToggle}

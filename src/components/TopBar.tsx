@@ -62,9 +62,10 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 interface TopBarProps {
   onMenuClick: () => void;
+  isMobile: boolean;
 }
 
-export default function TopBar({ onMenuClick }: TopBarProps) {
+export default function TopBar({ onMenuClick, isMobile }: TopBarProps) {
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState<null | HTMLElement>(null);

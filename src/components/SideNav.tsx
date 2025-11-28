@@ -13,23 +13,19 @@ import HomeIcon from '@mui/icons-material/Home';
 import PeopleIcon from '@mui/icons-material/People';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'; // Tickets
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'; // Appointments
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import ShareIcon from '@mui/icons-material/Share'; // Channels
 import PersonIcon from '@mui/icons-material/Person'; // Profiles
 import SettingsIcon from '@mui/icons-material/Settings';
 import EventNoteIcon from '@mui/icons-material/EventNote'; // Audit
 import DeleteIcon from '@mui/icons-material/Delete'; // Trash
-import ScienceIcon from '@mui/icons-material/Science'; // Test
 import AssessmentIcon from '@mui/icons-material/Assessment'; // Channel Pivot Analytics
 import CategoryIcon from '@mui/icons-material/Category'; // Channel Management
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Box, Tooltip, IconButton } from '@mui/material';
+import { Box, Tooltip } from '@mui/material';
 import { alpha } from '@mui/material/styles'; // alpha 함수를 명시적으로 import
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 const drawerWidth = 240;
 const collapsedDrawerWidth = 72; // GNB 접힘 너비
@@ -55,9 +51,9 @@ export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth
     { text: '문의', icon: <PeopleIcon />, href: '/leads' },
     { text: '상담', icon: <ConfirmationNumberIcon />, href: '/tickets' },
     { text: '예약', icon: <CalendarMonthIcon />, href: '/appointments' },
-    { text: '대시보드', icon: <DashboardIcon />, href: '/dashboards' },
-    { text: '채널 피벗', icon: <AssessmentIcon />, href: '/dashboards/channel-pivot' },
-    { text: '테스트(채널피벗)', icon: <ScienceIcon />, href: '/dashboards/channel-pivot-test' },
+    { text: '채널 피벗', icon: <AssessmentIcon />, href: '/channel-pivot' },
+    { text: '에이전트 성과', icon: <PeopleIcon />, href: '/agent-performance' },
+    { text: '퍼널 분석', icon: <AssessmentIcon />, href: '/funnel' },
     { text: '채널', icon: <ShareIcon />, href: '/channels' },
     { text: '채널 관리', icon: <CategoryIcon />, href: '/settings/channels' },
     { text: '휴지통', icon: <DeleteIcon />, href: '/trash' },
@@ -115,20 +111,6 @@ export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth
           </Tooltip>
         ))}
       </List>
-
-      {/* 데스크톱에서만 토글 버튼 표시 (태블릿/모바일에서는 숨김) */}
-      {!isMobile && !isTablet && (
-        <>
-          <Divider />
-          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
-            <Tooltip title={desktopCollapsed ? "메뉴 펼치기" : "메뉴 접기"} placement="right">
-              <IconButton onClick={onDesktopToggle} size="small">
-                {desktopCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </>
-      )}
     </Box>
   );
 
