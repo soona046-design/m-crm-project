@@ -3,13 +3,81 @@
 @tailwind utilities;
 
 :root {
-  /* Next.js 폰트 변수 정의 */
-  --font-noto-sans-kr: var(--font-noto-sans-kr); /* 실제 Noto Sans KR 폰트 변수 */
-  --font-lato: var(--font-lato); /* 실제 Lato 폰트 변수 */
+  --background: 0 0% 99%;
+  --foreground: 270 10% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 270 10% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 270 10% 20%;
+  --primary: 275 80% 55%;
+  --primary-foreground: 0 0% 99%;
+  --secondary: 270 10% 97%;
+  --secondary-foreground: 270 10% 20%;
+  --muted: 270 10% 97%;
+  --muted-foreground: 270 5% 50%;
+  --accent: 280 65% 68%;
+  --accent-foreground: 0 0% 99%;
+  --destructive: 25 84% 55%;
+  --destructive-foreground: 0 0% 99%;
+  --border: 270 10% 93%;
+  --input: 270 10% 93%;
+  --ring: 275 80% 55%;
+  --radius: 0.5rem;
+  --chart-1: 280 65% 68%;
+  --chart-2: 275 70% 62%;
+  --chart-3: 130 60% 60%;
+  --chart-4: 25 84% 55%;
+  --chart-5: 290 60% 70%;
+  --sidebar: 275 80% 55%;
+  --sidebar-foreground: 0 0% 99%;
+  --sidebar-primary: 0 0% 99%;
+  --sidebar-primary-foreground: 275 80% 55%;
+  --sidebar-accent: 275 80% 48%;
+  --sidebar-accent-foreground: 0 0% 99%;
+  --sidebar-border: 275 75% 48%;
+  --sidebar-ring: 0 0% 99%;
+}
+
+.dark {
+  --background: 270 10% 12%;
+  --foreground: 270 5% 95%;
+  --card: 270 10% 15%;
+  --card-foreground: 270 5% 95%;
+  --popover: 270 10% 15%;
+  --popover-foreground: 270 5% 95%;
+  --primary: 280 65% 68%;
+  --primary-foreground: 270 10% 12%;
+  --secondary: 270 10% 20%;
+  --secondary-foreground: 270 5% 95%;
+  --muted: 270 10% 20%;
+  --muted-foreground: 270 5% 55%;
+  --accent: 280 65% 68%;
+  --accent-foreground: 270 10% 12%;
+  --destructive: 25 84% 55%;
+  --destructive-foreground: 270 5% 95%;
+  --border: 270 10% 22%;
+  --input: 270 10% 22%;
+  --ring: 280 65% 68%;
+  --chart-1: 280 65% 68%;
+  --chart-2: 275 70% 62%;
+  --chart-3: 130 60% 60%;
+  --chart-4: 25 84% 55%;
+  --chart-5: 290 60% 70%;
+  --sidebar: 270 10% 15%;
+  --sidebar-foreground: 270 5% 95%;
+  --sidebar-primary: 280 65% 68%;
+  --sidebar-primary-foreground: 270 10% 12%;
+  --sidebar-accent: 270 10% 20%;
+  --sidebar-accent-foreground: 270 5% 95%;
+  --sidebar-border: 270 10% 22%;
+  --sidebar-ring: 280 65% 68%;
+}
+
+* {
+  border-color: hsl(var(--border));
 }
 
 body {
-  /* Material UI 테마에서 폰트 패밀리를 정의하므로, 여기서는 폰트 변수를 제거합니다. */
-  /* 대신, MUI 테마에서 font-family를 notoSansKR.style.fontFamily 등으로 직접 설정했습니다. */
-  /* Material UI가 body에 적용하는 폰트가 우선합니다. */
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }

@@ -305,12 +305,16 @@ export default function LeadsPage() {
       // Apply search filter if searchTerm exists
       let filteredLeads = allLeads;
       if (searchTerm) {
-        filteredLeads = filteredLeads.filter(lead =>
-          lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lead.primary_phone.includes(searchTerm) ||
-          lead.utm_source.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lead.assignee_name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        filteredLeads = filteredLeads.filter(lead => {
+          const utmSourceStr = Array.isArray(lead.utm_source)
+            ? lead.utm_source.join(' ')
+            : (lead.utm_source || '');
+
+          return lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.primary_phone.includes(searchTerm) ||
+            utmSourceStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.assignee_name.toLowerCase().includes(searchTerm.toLowerCase());
+        });
       }
 
       // Apply filters
@@ -318,7 +322,10 @@ export default function LeadsPage() {
         filteredLeads = filteredLeads.filter(lead => appliedFilters.status.includes(lead.status));
       }
       if (appliedFilters.channel.length > 0) {
-        filteredLeads = filteredLeads.filter(lead => appliedFilters.channel.includes(lead.utm_source));
+        filteredLeads = filteredLeads.filter(lead => {
+          const channels = Array.isArray(lead.utm_source) ? lead.utm_source : [lead.utm_source];
+          return channels.some(channel => appliedFilters.channel.includes(channel));
+        });
       }
       if (appliedFilters.assignee.length > 0) {
         filteredLeads = filteredLeads.filter(lead => appliedFilters.assignee.includes(lead.assignee_name));
