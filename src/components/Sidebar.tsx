@@ -27,6 +27,7 @@ const menuItems = [
   { icon: TrendingUp, label: "채널 피벗", href: "/channel-pivot" },
   { icon: PeopleIcon, label: "에이전트 성과", href: "/agent-performance" },
   { icon: BarChart3, label: "퍼널 분석", href: "/funnel" },
+  { icon: Activity, label: "채널-진료 분석", href: "/dashboards/channel-treatment-matrix" },
   { icon: Share2, label: "채널", href: "/channels" },
   { icon: FolderTree, label: "채널 관리", href: "/settings/channels" },
   { icon: Trash2, label: "휴지통", href: "/trash" },
