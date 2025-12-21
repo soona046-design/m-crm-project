@@ -3,6 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import 'dayjs/locale/ko';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -16,11 +21,15 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { Collapse } from '@mui/material';
 import api from '@/lib/axios';
 
 interface ChannelPerformanceData {
   channel: string;
+  category_code?: string;
+  category_name?: string;
+  category_color?: string;
   leads: number;
   appointments: number;
   cost: number; // 총 광고 비용
@@ -32,6 +41,45 @@ interface ChannelPerformanceData {
   roas: number; // ROAS (수익/비용)
 }
 
+interface ChannelDetailData {
+  channel: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  leads: number;
+  cvr: number;
+  tickets: number;
+  appointments: number;
+  contracts: number;
+  conversionRate: number;
+  cost: number;
+  revenue: number;
+  cpa: number;
+  roi: number;
+}
+
+interface CategoryPerformanceData {
+  category_code: string; // 'online', 'offline', 'db'
+  category_name: string; // '온라인', '오프라인', 'DB'
+  category_color: string; // '#2196F3', '#FF9800', '#4CAF50'
+  impressions: number;
+  clicks: number;
+  ctr: number; // 클릭률
+  leads: number;
+  cvr: number; // 전환율
+  tickets: number; // 상담 수
+  appointments: number; // 예약 수
+  contracts: number; // 계약 수
+  conversionRate: number; // 리드 → 예약 전환율
+  cost: number;
+  revenue: number;
+  cpc: number; // Cost Per Click
+  cpa: number; // Cost Per Acquisition
+  roi: number; // ROI %
+  channels?: ChannelDetailData[]; // 세부 채널 데이터
+}
+
 interface PivotTableData {
   id: string;
   channel: string;
@@ -39,10 +87,14 @@ interface PivotTableData {
   year: number;
   month: number;
   week: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
   leads: number;
   appointments: number;
   cost: number;
   revenue: number;
+  cpc: number;
   cpl: number;
   cpa: number;
   conversionRate: number;
@@ -58,10 +110,13 @@ interface MonthlyData {
   year: number;
   month: number;
   weeks: WeekData[];
+  totalImpressions: number;
+  totalClicks: number;
   totalLeads: number;
   totalAppointments: number;
   totalCost: number;
   totalRevenue: number;
+  avgCpc: number;
   cpl: number;
   cpa: number;
   conversionRate: number;
@@ -74,10 +129,13 @@ interface WeekData {
   weekLabel: string; // "첫번째주", "두번째주"...
   dateRange: string; // "11/1-11/7"
   campaigns: CampaignData[];
+  totalImpressions: number;
+  totalClicks: number;
   totalLeads: number;
   totalAppointments: number;
   totalCost: number;
   totalRevenue: number;
+  avgCpc: number;
   cpl: number;
   cpa: number;
   conversionRate: number;
@@ -89,10 +147,14 @@ interface CampaignData {
   id: string;
   channel: string;
   campaign: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
   leads: number;
   appointments: number;
   cost: number;
   revenue: number;
+  cpc: number;
   cpl: number;
   cpa: number;
   conversionRate: number;
@@ -113,11 +175,21 @@ interface SummaryMetrics {
 }
 
 export default function ChannelPivotDashboardPage() {
+  // 날짜 범위 state (기본값: 최근 3개월)
+  const getDefaultStartDate = () => {
+    return dayjs().subtract(2, 'month').startOf('month'); // 3개월 전 월초
+  };
+
+  const [startDate, setStartDate] = useState<Dayjs | null>(getDefaultStartDate());
+  const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
+
   const [channelPerformanceData, setChannelPerformanceData] = useState<ChannelPerformanceData[]>([]);
+  const [categoryPerformanceData, setCategoryPerformanceData] = useState<CategoryPerformanceData[]>([]);
   const [pivotTableData, setPivotTableData] = useState<PivotTableData[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetrics>({
     totalCost: 0,
     totalRevenue: 0,
@@ -147,6 +219,8 @@ export default function ChannelPivotDashboardPage() {
   const [newCampaign, setNewCampaign] = useState({
     channel: '',
     campaign: '',
+    impressions: 0,
+    clicks: 0,
     leads: 0,
     appointments: 0,
     cost: 0,
@@ -154,6 +228,11 @@ export default function ChannelPivotDashboardPage() {
     startDate: getTodayDate(),
     endDate: getTodayDate(),
   });
+
+  // 채널 카테고리 및 매핑 데이터
+  const [channelCategories, setChannelCategories] = useState<any[]>([]);
+  const [channelMappings, setChannelMappings] = useState<any[]>([]);
+  const [selectedCategoryForCampaign, setSelectedCategoryForCampaign] = useState<string>('');
 
   // ROI 계산 헬퍼 함수
   const calculateROI = (revenue: number, cost: number): number => {
@@ -218,6 +297,10 @@ export default function ChannelPivotDashboardPage() {
     // 채널별 집계 재계산
     recalculateChannelData(updatedData);
 
+    // 월별 데이터 재계산 (화면 업데이트를 위해 필수!)
+    const updatedMonthlyData = groupByMonth(updatedData);
+    setMonthlyData(updatedMonthlyData);
+
     setEditingCell(null);
     setEditValue('');
   };
@@ -233,8 +316,15 @@ export default function ChannelPivotDashboardPage() {
 
     campaignData.forEach(campaign => {
       if (!channelMap.has(campaign.channel)) {
+        // 기존 channelPerformanceData에서 카테고리 정보 찾기
+        const existingChannel = channelPerformanceData.find(ch => ch.channel === campaign.channel);
+
         channelMap.set(campaign.channel, {
           channel: campaign.channel,
+          // 카테고리 정보 보존
+          category_code: existingChannel?.category_code,
+          category_name: existingChannel?.category_name,
+          category_color: existingChannel?.category_color,
           leads: 0,
           appointments: 0,
           cost: 0,
@@ -306,10 +396,13 @@ export default function ChannelPivotDashboardPage() {
           year: campaign.year,
           month: campaign.month,
           weeks: [],
+          totalImpressions: 0,
+          totalClicks: 0,
           totalLeads: 0,
           totalAppointments: 0,
           totalCost: 0,
           totalRevenue: 0,
+          avgCpc: 0,
           cpl: 0,
           cpa: 0,
           conversionRate: 0,
@@ -328,10 +421,13 @@ export default function ChannelPivotDashboardPage() {
           weekLabel: getWeekLabel(campaign.week),
           dateRange: getDateRange(campaign.year, campaign.month, campaign.week),
           campaigns: [],
+          totalImpressions: 0,
+          totalClicks: 0,
           totalLeads: 0,
           totalAppointments: 0,
           totalCost: 0,
           totalRevenue: 0,
+          avgCpc: 0,
           cpl: 0,
           cpa: 0,
           conversionRate: 0,
@@ -346,10 +442,14 @@ export default function ChannelPivotDashboardPage() {
         id: campaign.id,
         channel: campaign.channel,
         campaign: campaign.campaign,
+        impressions: campaign.impressions,
+        clicks: campaign.clicks,
+        ctr: campaign.ctr,
         leads: campaign.leads,
         appointments: campaign.appointments,
         cost: campaign.cost,
         revenue: campaign.revenue,
+        cpc: campaign.cpc,
         cpl: campaign.cpl,
         cpa: campaign.cpa,
         conversionRate: campaign.conversionRate,
@@ -359,12 +459,16 @@ export default function ChannelPivotDashboardPage() {
       });
 
       // 주차 집계
+      weekData.totalImpressions += campaign.impressions;
+      weekData.totalClicks += campaign.clicks;
       weekData.totalLeads += campaign.leads;
       weekData.totalAppointments += campaign.appointments;
       weekData.totalCost += campaign.cost;
       weekData.totalRevenue += campaign.revenue;
 
       // 월 집계
+      monthData.totalImpressions += campaign.impressions;
+      monthData.totalClicks += campaign.clicks;
       monthData.totalLeads += campaign.leads;
       monthData.totalAppointments += campaign.appointments;
       monthData.totalCost += campaign.cost;
@@ -376,6 +480,7 @@ export default function ChannelPivotDashboardPage() {
       // 주별 지표 계산
       month.weeks = month.weeks.map(week => ({
         ...week,
+        avgCpc: week.totalClicks > 0 ? Math.round(week.totalCost / week.totalClicks) : 0,
         cpl: week.totalLeads > 0 ? Math.round(week.totalCost / week.totalLeads) : 0,
         cpa: week.totalAppointments > 0 ? Math.round(week.totalCost / week.totalAppointments) : 0,
         conversionRate: calculateConversionRate(week.totalAppointments, week.totalLeads),
@@ -386,6 +491,7 @@ export default function ChannelPivotDashboardPage() {
       // 월별 지표 계산
       return {
         ...month,
+        avgCpc: month.totalClicks > 0 ? Math.round(month.totalCost / month.totalClicks) : 0,
         cpl: month.totalLeads > 0 ? Math.round(month.totalCost / month.totalLeads) : 0,
         cpa: month.totalAppointments > 0 ? Math.round(month.totalCost / month.totalAppointments) : 0,
         conversionRate: calculateConversionRate(month.totalAppointments, month.totalLeads),
@@ -423,6 +529,19 @@ export default function ChannelPivotDashboardPage() {
     });
   };
 
+  // 카테고리 확장/축소 토글
+  const toggleCategory = (categoryCode: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryCode)) {
+        newSet.delete(categoryCode);
+      } else {
+        newSet.add(categoryCode);
+      }
+      return newSet;
+    });
+  };
+
   // 새 캠페인 추가 핸들러
   const handleAddCampaign = () => {
     if (!newCampaign.channel || !newCampaign.campaign) {
@@ -451,10 +570,14 @@ export default function ChannelPivotDashboardPage() {
       year,
       month,
       week,
+      impressions: newCampaign.impressions || 0,
+      clicks: newCampaign.clicks || 0,
+      ctr: newCampaign.clicks > 0 && newCampaign.impressions > 0 ? (newCampaign.clicks / newCampaign.impressions) * 100 : 0,
       leads: newCampaign.leads,
       appointments: newCampaign.appointments,
       cost: newCampaign.cost,
       revenue: newCampaign.revenue,
+      cpc: newCampaign.clicks > 0 ? Math.round(newCampaign.cost / newCampaign.clicks) : 0,
       cpl: newCampaign.leads > 0 ? Math.round(newCampaign.cost / newCampaign.leads) : 0,
       cpa: newCampaign.appointments > 0 ? Math.round(newCampaign.cost / newCampaign.appointments) : 0,
       conversionRate: calculateConversionRate(newCampaign.appointments, newCampaign.leads),
@@ -481,9 +604,12 @@ export default function ChannelPivotDashboardPage() {
 
     // 다이얼로그 닫고 초기화
     setAddCampaignDialogOpen(false);
+    setSelectedCategoryForCampaign('');
     setNewCampaign({
       channel: '',
       campaign: '',
+      impressions: 0,
+      clicks: 0,
       leads: 0,
       appointments: 0,
       cost: 0,
@@ -518,26 +644,37 @@ export default function ChannelPivotDashboardPage() {
     alert('캠페인이 삭제되었습니다.');
   };
 
-  // TODO: 기간 필터링, 지점 필터링 등 구현
+  // TODO: 지점 필터링 등 구현
   const fetchChannelData = useCallback(async () => {
     console.log('fetchChannelData called');
     setLoading(true);
     setError(null);
     try {
-      // 날짜 범위 설정 (최근 3개월)
-      const now = new Date();
-      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split('T')[0];
+      // 날짜 범위 설정 (state에서 가져옴)
+      const startDateStr = startDate ? startDate.format('YYYY-MM-DD') : dayjs().subtract(2, 'month').startOf('month').format('YYYY-MM-DD');
+      const endDateStr = endDate ? endDate.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
 
-      console.log('Fetching from backend API', { startDate, endDate });
+      console.log('Fetching from backend API', { startDate: startDateStr, endDate: endDateStr });
 
       // 백엔드 API 호출
       const response = await api.get('/api/dashboards/channel-pivot', {
-        params: { startDate, endDate }
+        params: { startDate: startDateStr, endDate: endDateStr }
       });
 
       if (response.data && response.data.pivotTable && response.data.pivotTable.length > 0) {
         console.log('✅ Backend API response received', response.data);
+
+        // 카테고리 성과 데이터 처리
+        if (response.data.categoryPerformance) {
+          setCategoryPerformanceData(response.data.categoryPerformance);
+          console.log('📊 Category Performance Data:', response.data.categoryPerformance);
+        }
+
+        // 채널 성과 데이터 처리 (카테고리 정보 포함)
+        if (response.data.channelPerformance && response.data.channelPerformance.length > 0) {
+          setChannelPerformanceData(response.data.channelPerformance);
+          console.log('📊 Channel Performance Data:', response.data.channelPerformance);
+        }
 
         const backendPivotTable = response.data.pivotTable;
 
@@ -551,16 +688,20 @@ export default function ChannelPivotDashboardPage() {
             year: now.getFullYear(),
             month: now.getMonth() + 1,
             week: Math.ceil(now.getDate() / 7), // 현재 날짜 기준 주차
+            impressions: item.impressions || 0,
+            clicks: item.clicks || 0,
+            ctr: item.ctr || 0,
             leads: item.leads || 0,
             appointments: item.appointments || 0,
-            cost: item.cpa * item.leads || 0, // cpa * leads로 cost 계산
+            cost: item.cost || 0,
             revenue: item.revenue || 0,
+            cpc: item.cpc || 0,
             cpl: item.cpa || 0,
             cpa: item.cpa || 0,
             conversionRate: calculateConversionRate(item.appointments, item.leads),
             roi: item.roi || 0,
             roas: item.roas || 0,
-            source: 'api' as const, // API에서 가져온 데이터는 읽기 전용
+            source: item.source || 'api' as const, // API에서 가져온 데이터는 읽기 전용
           };
         });
 
@@ -583,7 +724,12 @@ export default function ChannelPivotDashboardPage() {
         });
 
         setPivotTableData(combinedData);
-        recalculateChannelData(combinedData);
+
+        // 백엔드에서 channelPerformance가 없으면 수동으로 계산
+        if (!response.data.channelPerformance || response.data.channelPerformance.length === 0) {
+          recalculateChannelData(combinedData);
+        }
+
         setMonthlyData(groupByMonth(combinedData));
 
         // localStorage의 더미 데이터 삭제
@@ -645,20 +791,45 @@ export default function ChannelPivotDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
+
+  // 채널 카테고리 및 매핑 데이터 로드
+  const fetchChannelManagementData = async () => {
+    try {
+      const [categoriesRes, mappingsRes] = await Promise.all([
+        api.get('/api/channel-management/categories'),
+        api.get('/api/channel-management/mappings'),
+      ]);
+      setChannelCategories(categoriesRes.data);
+      setChannelMappings(mappingsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch channel management data:', error);
+    }
+  };
 
   useEffect(() => {
     fetchChannelData();
+    fetchChannelManagementData();
   }, [fetchChannelData]);
 
-  const formatCurrency = (value: number) => `₩${value.toLocaleString()}`;
-  const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
-  const formatNumber = (value: number) => value.toLocaleString();
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value)) return '₩0';
+    return `₩${value.toLocaleString()}`;
+  };
+  const formatPercentage = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value)) return '0.0%';
+    return `${value.toFixed(1)}%`;
+  };
+  const formatNumber = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value)) return '0';
+    return value.toLocaleString();
+  };
 
   // 파이 차트 색상
   const COLORS = ['#1E88E5', '#00897B', '#FFC107', '#E53935', '#9C27B0'];
 
-  const getROIColor = (roi: number) => {
+  const getROIColor = (roi: number | undefined) => {
+    if (roi === undefined || roi === null || isNaN(roi)) return '#9e9e9e'; // 회색
     if (roi >= 100) return '#4caf50'; // 녹색
     if (roi >= 50) return '#ff9800'; // 주황
     return '#f44336'; // 빨강
@@ -672,6 +843,92 @@ export default function ChannelPivotDashboardPage() {
       <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
         광고 비용, 리드 유입량, 전환율을 기반으로 채널별 ROI를 측정합니다
       </Typography>
+
+      {/* 날짜 범위 선택 UI */}
+      <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarTodayIcon sx={{ color: '#1976d2' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              조회 기간
+            </Typography>
+          </Box>
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+            <DatePicker
+              label="시작일"
+              value={startDate}
+              onChange={(newValue) => setStartDate(newValue)}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { bgcolor: 'white', minWidth: 160 }
+                }
+              }}
+            />
+            <Typography variant="body1" sx={{ mx: 1 }}>
+              ~
+            </Typography>
+            <DatePicker
+              label="종료일"
+              value={endDate}
+              onChange={(newValue) => setEndDate(newValue)}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { bgcolor: 'white', minWidth: 160 }
+                }
+              }}
+            />
+          </LocalizationProvider>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setStartDate(dayjs().subtract(7, 'day'));
+                setEndDate(dayjs());
+              }}
+            >
+              최근 1주
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setStartDate(dayjs().subtract(1, 'month'));
+                setEndDate(dayjs());
+              }}
+            >
+              최근 1개월
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setStartDate(dayjs().subtract(2, 'month').startOf('month'));
+                setEndDate(dayjs());
+              }}
+            >
+              최근 3개월
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setStartDate(dayjs().subtract(6, 'month').startOf('month'));
+                setEndDate(dayjs());
+              }}
+            >
+              최근 6개월
+            </Button>
+          </Box>
+          {startDate && endDate && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+              {endDate.diff(startDate, 'day')}일간의 데이터
+            </Typography>
+          )}
+        </Box>
+      </Paper>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -759,50 +1016,232 @@ export default function ChannelPivotDashboardPage() {
             </Card>
           </Grid>
 
-          {/* 채널별 ROI 비교 막대 차트 */}
+          {/* 카테고리별 성과 카드 */}
+          {categoryPerformanceData.length > 0 && (
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                채널 카테고리별 성과
+              </Typography>
+              {categoryPerformanceData.map((category, index) => (
+                <Paper key={index} sx={{ mb: 2, borderLeft: `4px solid ${category.category_color}` }}>
+                  {/* 카테고리 요약 카드 - 클릭 가능 */}
+                  <Box
+                    onClick={() => toggleCategory(category.category_code)}
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      '&:hover': { bgcolor: '#f5f5f5' },
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <IconButton size="small">
+                          {expandedCategories.has(category.category_code) ? (
+                            <KeyboardArrowDownIcon />
+                          ) : (
+                            <KeyboardArrowRightIcon />
+                          )}
+                        </IconButton>
+                        <Typography variant="h6">
+                          {category.category_name}
+                        </Typography>
+                        <Chip
+                          label={formatPercentage(category.roi)}
+                          sx={{
+                            bgcolor: getROIColor(category.roi),
+                            color: '#fff',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 3 }}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            문의
+                          </Typography>
+                          <Typography variant="h6">{category.leads}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            상담
+                          </Typography>
+                          <Typography variant="h6">{category.tickets}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            예약
+                          </Typography>
+                          <Typography variant="h6">{category.appointments}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            계약
+                          </Typography>
+                          <Typography variant="h6">{category.contracts}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            비용
+                          </Typography>
+                          <Typography variant="h6">{formatCurrency(category.cost)}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            매출
+                          </Typography>
+                          <Typography variant="h6" color="success.main">
+                            {formatCurrency(category.revenue)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            전환율
+                          </Typography>
+                          <Typography variant="h6">
+                            {formatPercentage(category.conversionRate)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* 세부 채널 데이터 표 - 확장 시 표시 */}
+                  <Collapse in={expandedCategories.has(category.category_code)}>
+                    {category.channels && category.channels.length > 0 ? (
+                      <TableContainer sx={{ maxHeight: 400 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                              <TableCell sx={{ fontWeight: 'bold' }}>채널</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>노출수</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>클릭수</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>CTR</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>CPC</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>문의</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>CVR</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>상담</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>예약</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>계약</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>전환율</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>비용</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>매출</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>CPA</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>ROI</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {category.channels.map((channel, idx) => (
+                              <TableRow key={idx} hover>
+                                <TableCell>{channel.channel}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.impressions)}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.clicks)}</TableCell>
+                                <TableCell align="right">{formatPercentage(channel.ctr)}</TableCell>
+                                <TableCell align="right">{formatCurrency(channel.cpc)}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.leads)}</TableCell>
+                                <TableCell align="right">{formatPercentage(channel.cvr)}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.tickets)}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.appointments)}</TableCell>
+                                <TableCell align="right">{formatNumber(channel.contracts)}</TableCell>
+                                <TableCell align="right">{formatPercentage(channel.conversionRate)}</TableCell>
+                                <TableCell align="right">{formatCurrency(channel.cost)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                                  {formatCurrency(channel.revenue)}
+                                </TableCell>
+                                <TableCell align="right">{formatCurrency(channel.cpa)}</TableCell>
+                                <TableCell align="right">
+                                  <Chip
+                                    label={formatPercentage(channel.roi)}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: channel.roi >= 100 ? '#e8f5e9' : channel.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                      color: getROIColor(channel.roi),
+                                      fontWeight: 'bold',
+                                    }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    ) : (
+                      <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+                        세부 채널 데이터가 없습니다.
+                      </Box>
+                    )}
+                  </Collapse>
+                </Paper>
+              ))}
+            </Grid>
+          )}
+
+          {/* 카테고리별 ROI 비교 막대 차트 */}
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3, height: 400 }}>
-              <Typography variant="h6" gutterBottom>채널별 ROI 비교</Typography>
-              {channelPerformanceData.length > 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Box>
+                  <Typography variant="h6" gutterBottom>카테고리별 ROI 비교 (온라인/오프라인/DB)</Typography>
+                  {startDate && endDate && (
+                    <Typography variant="caption" color="text.secondary">
+                      {startDate.format('YYYY-MM-DD')} ~ {endDate.format('YYYY-MM-DD')}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+              {categoryPerformanceData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="90%">
-                  <BarChart data={channelPerformanceData}>
+                  <BarChart data={categoryPerformanceData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="channel" />
+                    <XAxis dataKey="category_name" />
                     <YAxis />
                     <Tooltip
                       formatter={(value: number, name: string) => {
                         if (name === 'ROI') return [formatPercentage(value), name];
+                        if (name === '문의' || name === '상담' || name === '예약' || name === '계약') {
+                          return [value, name];
+                        }
                         return [formatNumber(value), name];
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="roi" fill="#9C27B0" name="ROI (%)" />
+                    <Bar dataKey="leads" fill="#2196F3" name="문의" />
+                    <Bar dataKey="tickets" fill="#FF9800" name="상담" />
+                    <Bar dataKey="appointments" fill="#4CAF50" name="예약" />
+                    <Bar dataKey="contracts" fill="#9C27B0" name="계약" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body1" color="text.secondary">No channel performance data available.</Typography>
+                <Typography variant="body1" color="text.secondary">카테고리 성과 데이터가 없습니다.</Typography>
               )}
             </Paper>
           </Grid>
 
-          {/* 채널별 문의 비율 파이 차트 */}
+          {/* 카테고리별 문의 비율 파이 차트 */}
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 3, height: 400 }}>
-              <Typography variant="h6" gutterBottom>채널별 문의 분포</Typography>
-              {channelPerformanceData.length > 0 ? (
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="h6" gutterBottom>카테고리별 문의 분포</Typography>
+                {startDate && endDate && (
+                  <Typography variant="caption" color="text.secondary">
+                    {startDate.format('YYYY-MM-DD')} ~ {endDate.format('YYYY-MM-DD')}
+                  </Typography>
+                )}
+              </Box>
+              {categoryPerformanceData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="90%">
                   <PieChart>
                     <Pie
-                      data={channelPerformanceData}
+                      data={categoryPerformanceData}
                       dataKey="leads"
-                      nameKey="channel"
+                      nameKey="category_name"
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
-                      label={(entry) => `${entry.channel}: ${entry.leads}`}
+                      label={(entry) => `${entry.category_name}: ${entry.leads}`}
                     >
-                      {channelPerformanceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {categoryPerformanceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.category_color || COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -818,15 +1257,29 @@ export default function ChannelPivotDashboardPage() {
           {/* 비용 vs 수익 비교 */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3, height: 400 }}>
-              <Typography variant="h6" gutterBottom>채널별 비용 vs 수익</Typography>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="h6" gutterBottom>채널별 비용 vs 수익</Typography>
+                {startDate && endDate && (
+                  <Typography variant="caption" color="text.secondary">
+                    {startDate.format('YYYY-MM-DD')} ~ {endDate.format('YYYY-MM-DD')}
+                  </Typography>
+                )}
+              </Box>
               {channelPerformanceData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="90%">
-                  <BarChart data={channelPerformanceData}>
+                  <BarChart data={channelPerformanceData.map(item => ({
+                    channel: item.channel || '알 수 없음',
+                    cost: item.cost || 0,
+                    revenue: item.revenue || 0,
+                  }))}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="channel" />
                     <YAxis />
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: any) => {
+                        const numValue = Number(value);
+                        return isNaN(numValue) ? '0원' : formatCurrency(numValue);
+                      }}
                     />
                     <Legend />
                     <Bar dataKey="cost" fill="#e53935" name="비용" />
@@ -839,62 +1292,94 @@ export default function ChannelPivotDashboardPage() {
             </Paper>
           </Grid>
 
-          {/* 채널별 성과 요약 테이블 */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>채널별 성과 요약</Typography>
-              {channelPerformanceData.length > 0 ? (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell><strong>채널</strong></TableCell>
-                        <TableCell align="right"><strong>문의 수</strong></TableCell>
-                        <TableCell align="right"><strong>예약 수</strong></TableCell>
-                        <TableCell align="right"><strong>전환율</strong></TableCell>
-                        <TableCell align="right"><strong>총 비용</strong></TableCell>
-                        <TableCell align="right"><strong>총 수익</strong></TableCell>
-                        <TableCell align="right"><strong>CPL</strong></TableCell>
-                        <TableCell align="right"><strong>CPA</strong></TableCell>
-                        <TableCell align="right"><strong>ROI</strong></TableCell>
-                        <TableCell align="right"><strong>ROAS</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {channelPerformanceData.map((row, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell><strong>{row.channel}</strong></TableCell>
-                          <TableCell align="right">{formatNumber(row.leads)}</TableCell>
-                          <TableCell align="right">{formatNumber(row.appointments)}</TableCell>
-                          <TableCell align="right">{formatPercentage(row.conversionRate)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.cost)}</TableCell>
-                          <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 600 }}>
-                            {formatCurrency(row.revenue)}
-                          </TableCell>
-                          <TableCell align="right">{formatCurrency(row.cpl)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.cpa)}</TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              label={formatPercentage(row.roi)}
-                              size="small"
-                              sx={{
-                                backgroundColor: row.roi >= 100 ? '#e8f5e9' : row.roi >= 50 ? '#fff3e0' : '#ffebee',
-                                color: getROIColor(row.roi),
-                                fontWeight: 600,
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align="right">{row.roas.toFixed(2)}x</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography variant="body1" color="text.secondary">No data available.</Typography>
-              )}
-            </Paper>
-          </Grid>
+          {/* 채널별 성과 요약 테이블 - 중복으로 비활성화 (채널 카테고리별 성과와 동일) */}
+          {/* <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+              채널별 성과 요약
+            </Typography>
+            {channelPerformanceData.length > 0 ? (
+              <>
+                {['online', 'offline', 'db', null].map((categoryCode) => {
+                  const channelsInCategory = channelPerformanceData.filter(
+                    (ch) => ch.category_code === categoryCode
+                  );
+
+                  if (channelsInCategory.length === 0) return null;
+
+                  const categoryName = channelsInCategory[0]?.category_name || '분류 안 됨';
+                  const categoryColor = channelsInCategory[0]?.category_color || '#9E9E9E';
+
+                  return (
+                    <Paper key={categoryCode || 'uncategorized'} sx={{ mb: 2, borderLeft: `4px solid ${categoryColor}` }}>
+                      <Box sx={{ p: 2, bgcolor: '#fafafa' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              bgcolor: categoryColor,
+                            }}
+                          />
+                          {categoryName}
+                        </Typography>
+                      </Box>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                              <TableCell><strong>채널</strong></TableCell>
+                              <TableCell align="right"><strong>문의 수</strong></TableCell>
+                              <TableCell align="right"><strong>예약 수</strong></TableCell>
+                              <TableCell align="right"><strong>전환율</strong></TableCell>
+                              <TableCell align="right"><strong>총 비용</strong></TableCell>
+                              <TableCell align="right"><strong>총 수익</strong></TableCell>
+                              <TableCell align="right"><strong>CPL</strong></TableCell>
+                              <TableCell align="right"><strong>CPA</strong></TableCell>
+                              <TableCell align="right"><strong>ROI</strong></TableCell>
+                              <TableCell align="right"><strong>ROAS</strong></TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {channelsInCategory.map((row, index) => (
+                              <TableRow key={index} hover>
+                                <TableCell><strong>{row.channel}</strong></TableCell>
+                                <TableCell align="right">{formatNumber(row.leads)}</TableCell>
+                                <TableCell align="right">{formatNumber(row.appointments)}</TableCell>
+                                <TableCell align="right">{formatPercentage(row.conversionRate)}</TableCell>
+                                <TableCell align="right">{formatCurrency(row.cost)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 600 }}>
+                                  {formatCurrency(row.revenue)}
+                                </TableCell>
+                                <TableCell align="right">{formatCurrency(row.cpl)}</TableCell>
+                                <TableCell align="right">{formatCurrency(row.cpa)}</TableCell>
+                                <TableCell align="right">
+                                  <Chip
+                                    label={formatPercentage(row.roi)}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: row.roi >= 100 ? '#e8f5e9' : row.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                      color: getROIColor(row.roi),
+                                      fontWeight: 600,
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell align="right">{row.roas.toFixed(2)}x</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Paper>
+                  );
+                })}
+              </>
+            ) : (
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="body1" color="text.secondary">데이터가 없습니다.</Typography>
+              </Paper>
+            )}
+          </Grid> */}
 
           {/* 월별/주별/캠페인별 상세 데이터 */}
           <Grid item xs={12}>
@@ -917,16 +1402,16 @@ export default function ChannelPivotDashboardPage() {
                       <TableRow>
                         <TableCell width={50}></TableCell>
                         <TableCell><strong>기간</strong></TableCell>
-                        <TableCell><strong>채널</strong></TableCell>
+                        <TableCell><strong>채널명</strong></TableCell>
+                        <TableCell align="right"><strong>노출</strong></TableCell>
+                        <TableCell align="right"><strong>클릭</strong></TableCell>
                         <TableCell align="right"><strong>문의</strong></TableCell>
                         <TableCell align="right"><strong>예약</strong></TableCell>
-                        <TableCell align="right"><strong>전환율</strong></TableCell>
-                        <TableCell align="right"><strong>비용</strong></TableCell>
+                        <TableCell align="right"><strong>총비용</strong></TableCell>
                         <TableCell align="right"><strong>수익</strong></TableCell>
-                        <TableCell align="right"><strong>CPL</strong></TableCell>
-                        <TableCell align="right"><strong>CPA</strong></TableCell>
+                        <TableCell align="right"><strong>전환율</strong></TableCell>
                         <TableCell align="right"><strong>ROI</strong></TableCell>
-                        <TableCell align="right"><strong>ROAS</strong></TableCell>
+                        <TableCell width={50}></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -957,27 +1442,15 @@ export default function ChannelPivotDashboardPage() {
                               </Typography>
                             </TableCell>
                             <TableCell></TableCell>
+                            <TableCell align="right"><strong>{formatNumber(monthRow.totalImpressions)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatNumber(monthRow.totalClicks)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalLeads)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalAppointments)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatPercentage(monthRow.conversionRate)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatCurrency(monthRow.totalCost)}</strong></TableCell>
-                            <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                              <strong>{formatCurrency(monthRow.totalRevenue)}</strong>
-                            </TableCell>
-                            <TableCell align="right"><strong>{formatCurrency(monthRow.cpl)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatCurrency(monthRow.cpa)}</strong></TableCell>
-                            <TableCell align="right">
-                              <Chip
-                                label={formatPercentage(monthRow.roi)}
-                                size="small"
-                                sx={{
-                                  backgroundColor: monthRow.roi >= 100 ? '#e8f5e9' : monthRow.roi >= 50 ? '#fff3e0' : '#ffebee',
-                                  color: getROIColor(monthRow.roi),
-                                  fontWeight: 700,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell align="right"><strong>{monthRow.roas.toFixed(2)}x</strong></TableCell>
+                            <TableCell align="right"><strong>{formatCurrency(monthRow.totalRevenue)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatPercentage(monthRow.conversionRate)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatPercentage(monthRow.roi)}</strong></TableCell>
+                            <TableCell></TableCell>
                           </TableRow>
 
                           {/* Level 2: 주별 행 */}
@@ -1009,27 +1482,15 @@ export default function ChannelPivotDashboardPage() {
                                     </Typography>
                                   </TableCell>
                                   <TableCell></TableCell>
+                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalImpressions)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalClicks)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalLeads)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalAppointments)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{formatPercentage(weekRow.conversionRate)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatCurrency(weekRow.totalCost)}</strong></TableCell>
-                                  <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 600 }}>
-                                    <strong>{formatCurrency(weekRow.totalRevenue)}</strong>
-                                  </TableCell>
-                                  <TableCell align="right"><strong>{formatCurrency(weekRow.cpl)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{formatCurrency(weekRow.cpa)}</strong></TableCell>
-                                  <TableCell align="right">
-                                    <Chip
-                                      label={formatPercentage(weekRow.roi)}
-                                      size="small"
-                                      sx={{
-                                        backgroundColor: weekRow.roi >= 100 ? '#e8f5e9' : weekRow.roi >= 50 ? '#fff3e0' : '#ffebee',
-                                        color: getROIColor(weekRow.roi),
-                                        fontWeight: 600,
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell align="right"><strong>{weekRow.roas.toFixed(2)}x</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatCurrency(weekRow.totalRevenue)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatPercentage(weekRow.conversionRate)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatPercentage(weekRow.roi)}</strong></TableCell>
+                                  <TableCell></TableCell>
                                 </TableRow>
 
                                 {/* Level 3: 캠페인별 행 */}
@@ -1052,7 +1513,83 @@ export default function ChannelPivotDashboardPage() {
                                         </Box>
                                       </TableCell>
 
-                                      {/* 문의 수 - 편집 가능 */}
+                                      {/* 노출 - 편집 가능 */}
+                                      <TableCell
+                                        align="right"
+                                        onClick={() => isEditable && handleCellClick(campaign.id, 'impressions', campaign.impressions, campaign.source)}
+                                        sx={{
+                                          cursor: isEditable ? 'pointer' : 'default',
+                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                        }}
+                                      >
+                                        {editingCell?.id === campaign.id && editingCell?.field === 'impressions' ? (
+                                          <TextField
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            size="small"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') handleCellSave();
+                                              if (e.key === 'Escape') handleCellCancel();
+                                            }}
+                                            InputProps={{
+                                              endAdornment: (
+                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
+                                                    <SaveIcon fontSize="small" />
+                                                  </IconButton>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
+                                                    <CancelIcon fontSize="small" />
+                                                  </IconButton>
+                                                </Box>
+                                              ),
+                                            }}
+                                            sx={{ width: '120px' }}
+                                          />
+                                        ) : (
+                                          formatNumber(campaign.impressions)
+                                        )}
+                                      </TableCell>
+
+                                      {/* 클릭 - 편집 가능 */}
+                                      <TableCell
+                                        align="right"
+                                        onClick={() => isEditable && handleCellClick(campaign.id, 'clicks', campaign.clicks, campaign.source)}
+                                        sx={{
+                                          cursor: isEditable ? 'pointer' : 'default',
+                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                        }}
+                                      >
+                                        {editingCell?.id === campaign.id && editingCell?.field === 'clicks' ? (
+                                          <TextField
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            size="small"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') handleCellSave();
+                                              if (e.key === 'Escape') handleCellCancel();
+                                            }}
+                                            InputProps={{
+                                              endAdornment: (
+                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
+                                                    <SaveIcon fontSize="small" />
+                                                  </IconButton>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
+                                                    <CancelIcon fontSize="small" />
+                                                  </IconButton>
+                                                </Box>
+                                              ),
+                                            }}
+                                            sx={{ width: '120px' }}
+                                          />
+                                        ) : (
+                                          formatNumber(campaign.clicks)
+                                        )}
+                                      </TableCell>
+
+                                      {/* 문의 - 편집 가능 */}
                                       <TableCell
                                         align="right"
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'leads', campaign.leads, campaign.source)}
@@ -1074,10 +1611,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1090,7 +1627,7 @@ export default function ChannelPivotDashboardPage() {
                                         )}
                                       </TableCell>
 
-                                      {/* 예약 수 - 편집 가능 */}
+                                      {/* 예약 - 편집 가능 */}
                                       <TableCell
                                         align="right"
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'appointments', campaign.appointments, campaign.source)}
@@ -1112,10 +1649,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1128,10 +1665,7 @@ export default function ChannelPivotDashboardPage() {
                                         )}
                                       </TableCell>
 
-                                      {/* 전환율 - 계산 값 (읽기 전용) */}
-                                      <TableCell align="right">{formatPercentage(campaign.conversionRate)}</TableCell>
-
-                                      {/* 비용 - 편집 가능 */}
+                                      {/* 총비용 - 편집 가능 */}
                                       <TableCell
                                         align="right"
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'cost', campaign.cost, campaign.source)}
@@ -1153,10 +1687,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1174,7 +1708,6 @@ export default function ChannelPivotDashboardPage() {
                                         align="right"
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'revenue', campaign.revenue, campaign.source)}
                                         sx={{
-                                          color: '#4caf50',
                                           cursor: isEditable ? 'pointer' : 'default',
                                           '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
                                         }}
@@ -1192,10 +1725,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1208,9 +1741,10 @@ export default function ChannelPivotDashboardPage() {
                                         )}
                                       </TableCell>
 
-                                      {/* CPL, CPA - 계산 값 (읽기 전용) */}
-                                      <TableCell align="right">{formatCurrency(campaign.cpl)}</TableCell>
-                                      <TableCell align="right">{formatCurrency(campaign.cpa)}</TableCell>
+                                      {/* 전환율 - 계산 값 (읽기 전용) */}
+                                      <TableCell align="right">
+                                        {formatPercentage(campaign.conversionRate)}
+                                      </TableCell>
 
                                       {/* ROI - 계산 값 (읽기 전용) */}
                                       <TableCell align="right">
@@ -1218,14 +1752,28 @@ export default function ChannelPivotDashboardPage() {
                                           label={formatPercentage(campaign.roi)}
                                           size="small"
                                           sx={{
-                                            backgroundColor: campaign.roi >= 100 ? '#e8f5e9' : campaign.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                            bgcolor: campaign.roi >= 100 ? '#e8f5e9' : campaign.roi >= 50 ? '#fff3e0' : '#ffebee',
                                             color: getROIColor(campaign.roi),
+                                            fontWeight: 'bold',
                                           }}
                                         />
                                       </TableCell>
 
-                                      {/* ROAS - 계산 값 (읽기 전용) */}
-                                      <TableCell align="right">{campaign.roas.toFixed(2)}x</TableCell>
+                                      {/* 삭제 버튼 - 수동 추가 캠페인만 */}
+                                      <TableCell align="center">
+                                        {isEditable && (
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteCampaign(campaign.id);
+                                            }}
+                                            sx={{ color: '#f44336' }}
+                                          >
+                                            <DeleteIcon fontSize="small" />
+                                          </IconButton>
+                                        )}
+                                      </TableCell>
                                     </TableRow>
                                   );
                                 })}
@@ -1246,23 +1794,75 @@ export default function ChannelPivotDashboardPage() {
       )}
 
       {/* 캠페인 추가 다이얼로그 */}
-      <Dialog open={addCampaignDialogOpen} onClose={() => setAddCampaignDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={addCampaignDialogOpen}
+        onClose={() => {
+          setAddCampaignDialogOpen(false);
+          setSelectedCategoryForCampaign('');
+          setNewCampaign({
+            channel: '',
+            campaign: '',
+            impressions: 0,
+            clicks: 0,
+            leads: 0,
+            appointments: 0,
+            cost: 0,
+            revenue: 0,
+            startDate: getTodayDate(),
+            endDate: getTodayDate(),
+          });
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>새 캠페인 추가</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             <FormControl fullWidth>
+              <InputLabel>채널 카테고리</InputLabel>
+              <Select
+                value={selectedCategoryForCampaign}
+                onChange={(e) => {
+                  setSelectedCategoryForCampaign(e.target.value);
+                  setNewCampaign({ ...newCampaign, channel: '' }); // 카테고리 변경 시 채널 초기화
+                }}
+                label="채널 카테고리"
+              >
+                {channelCategories.map((category) => (
+                  <MenuItem key={category.id} value={category.code}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          bgcolor: category.color,
+                        }}
+                      />
+                      {category.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth disabled={!selectedCategoryForCampaign}>
               <InputLabel>채널</InputLabel>
               <Select
                 value={newCampaign.channel}
                 onChange={(e) => setNewCampaign({ ...newCampaign, channel: e.target.value })}
                 label="채널"
               >
-                <MenuItem value="Google Ads">Google Ads</MenuItem>
-                <MenuItem value="Facebook Ads">Facebook Ads</MenuItem>
-                <MenuItem value="Naver Ads">Naver Ads</MenuItem>
-                <MenuItem value="Instagram">Instagram</MenuItem>
-                <MenuItem value="YouTube">YouTube</MenuItem>
-                <MenuItem value="기타">기타</MenuItem>
+                {channelMappings
+                  .filter((mapping) => {
+                    if (!selectedCategoryForCampaign) return false;
+                    const category = channelCategories.find((c) => c.code === selectedCategoryForCampaign);
+                    return category && mapping.category_id === category.id && mapping.active;
+                  })
+                  .map((mapping) => (
+                    <MenuItem key={mapping.id} value={mapping.utm_source}>
+                      {mapping.display_name}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
             <TextField

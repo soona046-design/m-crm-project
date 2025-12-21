@@ -281,6 +281,10 @@ export default function ChannelPivotDashboardPage() {
     // 채널별 집계 재계산
     recalculateChannelData(updatedData);
 
+    // 월별 데이터 재계산 (화면 업데이트를 위해 필수!)
+    const updatedMonthlyData = groupByMonth(updatedData);
+    setMonthlyData(updatedMonthlyData);
+
     setEditingCell(null);
     setEditValue('');
   };
@@ -838,11 +842,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const lastWeek = new Date();
-                lastWeek.setDate(today.getDate() - 7);
-                setStartDate(lastWeek);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(7, 'day'));
+                setEndDate(dayjs());
               }}
             >
               최근 1주
@@ -851,11 +852,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const lastMonth = new Date();
-                lastMonth.setMonth(today.getMonth() - 1);
-                setStartDate(lastMonth);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(1, 'month'));
+                setEndDate(dayjs());
               }}
             >
               최근 1개월
@@ -864,12 +862,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const threeMonthsAgo = new Date();
-                threeMonthsAgo.setMonth(today.getMonth() - 2);
-                threeMonthsAgo.setDate(1);
-                setStartDate(threeMonthsAgo);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(2, 'month').startOf('month'));
+                setEndDate(dayjs());
               }}
             >
               최근 3개월
@@ -878,12 +872,8 @@ export default function ChannelPivotDashboardPage() {
               size="small"
               variant="outlined"
               onClick={() => {
-                const today = new Date();
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(today.getMonth() - 6);
-                sixMonthsAgo.setDate(1);
-                setStartDate(sixMonthsAgo);
-                setEndDate(today);
+                setStartDate(dayjs().subtract(6, 'month').startOf('month'));
+                setEndDate(dayjs());
               }}
             >
               최근 6개월
@@ -891,7 +881,7 @@ export default function ChannelPivotDashboardPage() {
           </Box>
           {startDate && endDate && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-              {endDate.diff(startDate, 'day') + 1}일간의 데이터
+              {endDate.diff(startDate, 'day')}일간의 데이터
             </Typography>
           )}
         </Box>
@@ -1497,10 +1487,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1535,10 +1525,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1576,10 +1566,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
@@ -1615,10 +1605,10 @@ export default function ChannelPivotDashboardPage() {
                                             InputProps={{
                                               endAdornment: (
                                                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                  <IconButton size="small" onClick={handleCellSave}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellSave(); }}>
                                                     <SaveIcon fontSize="small" />
                                                   </IconButton>
-                                                  <IconButton size="small" onClick={handleCellCancel}>
+                                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCellCancel(); }}>
                                                     <CancelIcon fontSize="small" />
                                                   </IconButton>
                                                 </Box>
