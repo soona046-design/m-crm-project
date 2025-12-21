@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel, Tabs, Tab } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -22,8 +22,11 @@ import LockIcon from '@mui/icons-material/Lock';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 import { Collapse } from '@mui/material';
 import api from '@/lib/axios';
+import * as XLSX from 'xlsx';
 
 interface ChannelPerformanceData {
   channel: string;
@@ -175,6 +178,9 @@ interface SummaryMetrics {
 }
 
 export default function ChannelPivotDashboardPage() {
+  // 탭 상태
+  const [currentTab, setCurrentTab] = useState(0);
+
   // 날짜 범위 state (기본값: 최근 3개월)
   const getDefaultStartDate = () => {
     return dayjs().subtract(2, 'month').startOf('month'); // 3개월 전 월초
@@ -644,6 +650,151 @@ export default function ChannelPivotDashboardPage() {
     alert('캠페인이 삭제되었습니다.');
   };
 
+  // Excel 템플릿 다운로드
+  const handleDownloadTemplate = () => {
+    try {
+      const template = [
+        {
+          channel: '네이버',
+          campaign: '브랜드검색_2025Q1',
+          startDate: '2025-01-01',
+          endDate: '2025-03-31',
+          leads: 100,
+          appointments: 50,
+          cost: 5000000,
+          revenue: 15000000
+        }
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(template);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '캠페인 데이터');
+
+      // 워크북을 바이너리로 변환
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+      // Blob 생성 및 다운로드
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '캠페인_데이터_템플릿.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('템플릿 다운로드 오류:', error);
+      alert('템플릿 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
+  // Excel 업로드
+  const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        const errors: string[] = [];
+        const newCampaigns: PivotTableData[] = [];
+
+        jsonData.forEach((row, index) => {
+          const requiredFields = ['channel', 'campaign', 'startDate', 'endDate'];
+          const missingFields = requiredFields.filter(field => !row[field]);
+
+          if (missingFields.length > 0) {
+            errors.push(`행 ${index + 2}: 필수 필드 누락 (${missingFields.join(', ')})`);
+            return;
+          }
+
+          // 날짜 처리 (Excel serial date to YYYY-MM-DD)
+          let startDateStr = row.startDate;
+          let endDateStr = row.endDate;
+
+          if (typeof row.startDate === 'number') {
+            const date = XLSX.SSF.parse_date_code(row.startDate);
+            startDateStr = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+          }
+          if (typeof row.endDate === 'number') {
+            const date = XLSX.SSF.parse_date_code(row.endDate);
+            endDateStr = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+          }
+
+          const startDate = new Date(startDateStr);
+          const year = startDate.getFullYear();
+          const month = startDate.getMonth() + 1;
+          const day = startDate.getDate();
+          const week = Math.ceil(day / 7);
+
+          const leads = Number(row.leads) || 0;
+          const appointments = Number(row.appointments) || 0;
+          const cost = Number(row.cost) || 0;
+          const revenue = Number(row.revenue) || 0;
+
+          newCampaigns.push({
+            id: `campaign_${Date.now()}_${index}`,
+            channel: row.channel,
+            campaign: row.campaign,
+            year,
+            month,
+            week,
+            impressions: 0,
+            clicks: 0,
+            ctr: 0,
+            leads,
+            appointments,
+            cost,
+            revenue,
+            cpc: 0,
+            cpl: leads > 0 ? Math.round(cost / leads) : 0,
+            cpa: appointments > 0 ? Math.round(cost / appointments) : 0,
+            conversionRate: calculateConversionRate(appointments, leads),
+            roi: calculateROI(revenue, cost),
+            roas: calculateROAS(revenue, cost),
+            source: 'manual',
+            startDate: startDateStr,
+            endDate: endDateStr,
+          });
+        });
+
+        if (errors.length > 0) {
+          alert('업로드 중 오류 발생:\n' + errors.join('\n'));
+          return;
+        }
+
+        const updatedData = [...pivotTableData, ...newCampaigns];
+        setPivotTableData(updatedData);
+
+        // localStorage 저장
+        if (typeof window !== 'undefined') {
+          const manualCampaigns = updatedData.filter(item => item.source === 'manual');
+          localStorage.setItem('mcrm_manual_campaigns', JSON.stringify(manualCampaigns));
+        }
+
+        // 채널별 집계 및 월별 데이터 재계산
+        recalculateChannelData(updatedData);
+        setMonthlyData(groupByMonth(updatedData));
+
+        alert(`${newCampaigns.length}개의 캠페인이 추가되었습니다.`);
+      } catch (error) {
+        console.error('Excel 업로드 오류:', error);
+        alert('엑셀 파일 처리 중 오류가 발생했습니다.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+    // 파일 input 초기화
+    event.target.value = '';
+  };
+
   // TODO: 지점 필터링 등 구현
   const fetchChannelData = useCallback(async () => {
     console.log('fetchChannelData called');
@@ -930,6 +1081,18 @@ export default function ChannelPivotDashboardPage() {
         </Box>
       </Paper>
 
+      {/* 탭 네비게이션 */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs
+          value={currentTab}
+          onChange={(e, newValue) => setCurrentTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="대시보드" />
+          <Tab label="상세 성과" />
+        </Tabs>
+      </Paper>
+
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
           <CircularProgress />
@@ -937,7 +1100,8 @@ export default function ChannelPivotDashboardPage() {
       )}
       {error && <Typography color="error">{error}</Typography>}
 
-      {!loading && !error && (
+      {/* 탭 0: 대시보드 */}
+      {!loading && !error && currentTab === 0 && (
         <Grid container spacing={3}>
           {/* 요약 지표 카드 */}
           <Grid item xs={12} md={3}>
@@ -1380,20 +1544,48 @@ export default function ChannelPivotDashboardPage() {
               </Paper>
             )}
           </Grid> */}
+        </Grid>
+      )}
 
-          {/* 월별/주별/캠페인별 상세 데이터 */}
+      {/* 탭 1: 상세 성과 */}
+      {!loading && !error && currentTab === 1 && (
+        <Grid container spacing={3}>
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">기간별 상세 성과</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAddCampaignDialogOpen(true)}
-                  size="small"
-                >
-                  캠페인 추가
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleDownloadTemplate}
+                    size="small"
+                  >
+                    템플릿 다운로드
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<UploadFileIcon />}
+                    size="small"
+                  >
+                    엑셀 업로드
+                    <input
+                      type="file"
+                      hidden
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelUpload}
+                    />
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setAddCampaignDialogOpen(true)}
+                    size="small"
+                  >
+                    캠페인 추가
+                  </Button>
+                </Box>
               </Box>
               {monthlyData.length > 0 ? (
                 <TableContainer sx={{ maxHeight: 600 }}>
