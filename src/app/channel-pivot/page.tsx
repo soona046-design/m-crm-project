@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel, Tabs, Tab } from '@mui/material';
+import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Checkbox } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -106,6 +106,7 @@ interface PivotTableData {
   source?: 'api' | 'manual'; // API 데이터 vs 수동 입력 데이터
   startDate?: string; // 캠페인 시작일 (YYYY-MM-DD)
   endDate?: string; // 캠페인 종료일 (YYYY-MM-DD)
+  deletedAt?: string; // 삭제일시 (ISO 8601)
 }
 
 interface MonthlyData {
@@ -196,6 +197,7 @@ export default function ChannelPivotDashboardPage() {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetrics>({
     totalCost: 0,
     totalRevenue: 0,
@@ -548,6 +550,150 @@ export default function ChannelPivotDashboardPage() {
     });
   };
 
+  // 체크박스 선택/해제
+  const toggleCampaignSelection = (campaignId: string) => {
+    setSelectedCampaigns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(campaignId)) {
+        newSet.delete(campaignId);
+      } else {
+        newSet.add(campaignId);
+      }
+      return newSet;
+    });
+  };
+
+  // 전체 선택/해제
+  const toggleAllCampaigns = () => {
+    const allCampaignIds = monthlyData.flatMap(month =>
+      month.weeks.flatMap(week =>
+        week.campaigns
+          .filter(campaign => !campaign.deletedAt) // 삭제되지 않은 캠페인만
+          .map(campaign => campaign.id)
+      )
+    );
+
+    if (selectedCampaigns.size === allCampaignIds.length && allCampaignIds.length > 0) {
+      setSelectedCampaigns(new Set());
+    } else {
+      setSelectedCampaigns(new Set(allCampaignIds));
+    }
+  };
+
+  // 선택된 캠페인 일괄 삭제 (휴지통으로 이동)
+  const handleBulkDelete = () => {
+    if (selectedCampaigns.size === 0) {
+      alert('삭제할 캠페인을 선택해주세요.');
+      return;
+    }
+
+    const count = selectedCampaigns.size;
+
+    if (!confirm(`선택한 ${count}개의 캠페인을 휴지통으로 이동하시겠습니까?`)) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const updatedData = pivotTableData.map(item => {
+      if (selectedCampaigns.has(item.id)) {
+        return { ...item, deletedAt: now };
+      }
+      return item;
+    });
+
+    setPivotTableData(updatedData);
+
+    // localStorage 업데이트
+    if (typeof window !== 'undefined') {
+      const manualCampaigns = updatedData.filter(item => item.source === 'manual');
+      localStorage.setItem('mcrm_manual_campaigns', JSON.stringify(manualCampaigns));
+      console.log('💾 Manual campaigns updated in localStorage');
+    }
+
+    // 채널별 집계 및 월별 데이터 재계산 (삭제된 항목 제외)
+    const activeData = updatedData.filter(item => !item.deletedAt);
+    recalculateChannelData(activeData);
+    setMonthlyData(groupByMonth(activeData));
+
+    setSelectedCampaigns(new Set());
+    alert(`${count}개의 캠페인이 휴지통으로 이동되었습니다.`);
+  };
+
+  // 휴지통에서 복원
+  const handleRestore = (id: string) => {
+    if (!confirm('이 캠페인을 복원하시겠습니까?')) {
+      return;
+    }
+
+    const updatedData = pivotTableData.map(item => {
+      if (item.id === id) {
+        const { deletedAt, ...rest } = item;
+        return rest as PivotTableData;
+      }
+      return item;
+    });
+
+    setPivotTableData(updatedData);
+
+    // localStorage 업데이트
+    if (typeof window !== 'undefined') {
+      const manualCampaigns = updatedData.filter(item => item.source === 'manual');
+      localStorage.setItem('mcrm_manual_campaigns', JSON.stringify(manualCampaigns));
+      console.log('💾 Manual campaigns updated in localStorage');
+    }
+
+    // 채널별 집계 및 월별 데이터 재계산
+    const activeData = updatedData.filter(item => !item.deletedAt);
+    recalculateChannelData(activeData);
+    setMonthlyData(groupByMonth(activeData));
+
+    alert('캠페인이 복원되었습니다.');
+  };
+
+  // 휴지통에서 영구 삭제
+  const handlePermanentDelete = (id: string) => {
+    if (!confirm('이 캠페인을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+
+    const updatedData = pivotTableData.filter(item => item.id !== id);
+    setPivotTableData(updatedData);
+
+    // localStorage 업데이트
+    if (typeof window !== 'undefined') {
+      const manualCampaigns = updatedData.filter(item => item.source === 'manual');
+      localStorage.setItem('mcrm_manual_campaigns', JSON.stringify(manualCampaigns));
+      console.log('💾 Manual campaigns updated in localStorage');
+    }
+
+    alert('캠페인이 영구적으로 삭제되었습니다.');
+  };
+
+  // 30일 경과 항목 자동 삭제
+  const cleanupOldDeletedItems = () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const updatedData = pivotTableData.filter(item => {
+      if (item.deletedAt) {
+        const deletedDate = new Date(item.deletedAt);
+        return deletedDate > thirtyDaysAgo; // 30일 이내만 유지
+      }
+      return true; // 삭제되지 않은 항목은 유지
+    });
+
+    if (updatedData.length < pivotTableData.length) {
+      setPivotTableData(updatedData);
+
+      // localStorage 업데이트
+      if (typeof window !== 'undefined') {
+        const manualCampaigns = updatedData.filter(item => item.source === 'manual');
+        localStorage.setItem('mcrm_manual_campaigns', JSON.stringify(manualCampaigns));
+        console.log('🗑️ Old deleted items cleaned up');
+      }
+    }
+  };
+
   // 새 캠페인 추가 핸들러
   const handleAddCampaign = () => {
     if (!newCampaign.channel || !newCampaign.campaign) {
@@ -659,10 +805,9 @@ export default function ChannelPivotDashboardPage() {
           campaign: '브랜드검색_2025Q1',
           startDate: '2025-01-01',
           endDate: '2025-03-31',
-          leads: 100,
-          appointments: 50,
-          cost: 5000000,
-          revenue: 15000000
+          impressions: 50000,
+          clicks: 2500,
+          cost: 5000000
         }
       ];
 
@@ -734,10 +879,11 @@ export default function ChannelPivotDashboardPage() {
           const day = startDate.getDate();
           const week = Math.ceil(day / 7);
 
-          const leads = Number(row.leads) || 0;
-          const appointments = Number(row.appointments) || 0;
+          const impressions = Number(row.impressions) || 0;
+          const clicks = Number(row.clicks) || 0;
           const cost = Number(row.cost) || 0;
-          const revenue = Number(row.revenue) || 0;
+          const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
+          const cpc = clicks > 0 ? cost / clicks : 0;
 
           newCampaigns.push({
             id: `campaign_${Date.now()}_${index}`,
@@ -746,19 +892,19 @@ export default function ChannelPivotDashboardPage() {
             year,
             month,
             week,
-            impressions: 0,
-            clicks: 0,
-            ctr: 0,
-            leads,
-            appointments,
+            impressions,
+            clicks,
+            ctr,
+            leads: 0,
+            appointments: 0,
             cost,
-            revenue,
-            cpc: 0,
-            cpl: leads > 0 ? Math.round(cost / leads) : 0,
-            cpa: appointments > 0 ? Math.round(cost / appointments) : 0,
-            conversionRate: calculateConversionRate(appointments, leads),
-            roi: calculateROI(revenue, cost),
-            roas: calculateROAS(revenue, cost),
+            revenue: 0,
+            cpc,
+            cpl: 0,
+            cpa: 0,
+            conversionRate: 0,
+            roi: 0,
+            roas: 0,
             source: 'manual',
             startDate: startDateStr,
             endDate: endDateStr,
@@ -961,6 +1107,7 @@ export default function ChannelPivotDashboardPage() {
   useEffect(() => {
     fetchChannelData();
     fetchChannelManagementData();
+    cleanupOldDeletedItems(); // 30일 경과 항목 자동 삭제
   }, [fetchChannelData]);
 
   const formatCurrency = (value: number | undefined) => {
@@ -1089,7 +1236,8 @@ export default function ChannelPivotDashboardPage() {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="대시보드" />
-          <Tab label="상세 성과" />
+          <Tab label="상세 성과 1" />
+          <Tab label="상세 성과 2" />
         </Tabs>
       </Paper>
 
@@ -1974,6 +2122,210 @@ export default function ChannelPivotDashboardPage() {
                           })}
                         </React.Fragment>
                       ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography variant="body1" color="text.secondary">월별 데이터가 없습니다.</Typography>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* 탭 2: 상세 성과 (복제) */}
+      {!loading && !error && currentTab === 2 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">기간별 상세 성과 (뷰 2)</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleDownloadTemplate}
+                    size="small"
+                  >
+                    템플릿 다운로드
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<UploadFileIcon />}
+                    size="small"
+                  >
+                    엑셀 업로드
+                    <input
+                      type="file"
+                      hidden
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelUpload}
+                    />
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setAddCampaignDialogOpen(true)}
+                    size="small"
+                  >
+                    캠페인 추가
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleBulkDelete}
+                    size="small"
+                    disabled={selectedCampaigns.size === 0}
+                  >
+                    일괄삭제 ({selectedCampaigns.size})
+                  </Button>
+                </Box>
+              </Box>
+              {monthlyData.length > 0 ? (
+                <TableContainer sx={{ maxHeight: 600 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell width={50}></TableCell>
+                        <TableCell width={50} padding="checkbox">
+                          <Checkbox
+                            checked={selectedCampaigns.size > 0 && selectedCampaigns.size === monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
+                            indeterminate={selectedCampaigns.size > 0 && selectedCampaigns.size < monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
+                            onChange={toggleAllCampaigns}
+                          />
+                        </TableCell>
+                        <TableCell><strong>기간</strong></TableCell>
+                        <TableCell><strong>채널</strong></TableCell>
+                        <TableCell align="right"><strong>노출</strong></TableCell>
+                        <TableCell align="right"><strong>클릭</strong></TableCell>
+                        <TableCell align="right"><strong>클릭당비용(원)</strong></TableCell>
+                        <TableCell align="right"><strong>비용(원)</strong></TableCell>
+                        <TableCell align="right"><strong>클릭율(%)</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {monthlyData.map((monthRow) => {
+                        const monthCPC = monthRow.totalClicks > 0 ? monthRow.totalCost / monthRow.totalClicks : 0;
+                        const monthCTR = monthRow.totalImpressions > 0 ? (monthRow.totalClicks / monthRow.totalImpressions * 100) : 0;
+                        return (
+                        <React.Fragment key={`tab2-${monthRow.yearMonth}`}>
+                          <TableRow
+                            hover
+                            sx={{
+                              backgroundColor: '#e3f2fd',
+                              cursor: 'pointer',
+                              '&:hover': { backgroundColor: '#bbdefb' }
+                            }}
+                            onClick={() => toggleMonth(monthRow.yearMonth)}
+                          >
+                            <TableCell>
+                              <IconButton size="small">
+                                {expandedMonths.has(monthRow.yearMonth) ? (
+                                  <KeyboardArrowDownIcon fontSize="small" />
+                                ) : (
+                                  <KeyboardArrowRightIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>
+                              <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                                {monthRow.yearMonth}
+                              </Typography>
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell align="right"><strong>{formatNumber(monthRow.totalImpressions)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatNumber(monthRow.totalClicks)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatCurrency(monthCPC)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatCurrency(monthRow.totalCost)}</strong></TableCell>
+                            <TableCell align="right"><strong>{monthCTR.toFixed(2)}%</strong></TableCell>
+                          </TableRow>
+
+                          {expandedMonths.has(monthRow.yearMonth) && monthRow.weeks.map((weekRow) => {
+                            const weekKey = `${monthRow.yearMonth}_W${weekRow.weekNumber}`;
+                            const weekCPC = weekRow.totalClicks > 0 ? weekRow.totalCost / weekRow.totalClicks : 0;
+                            const weekCTR = weekRow.totalImpressions > 0 ? (weekRow.totalClicks / weekRow.totalImpressions * 100) : 0;
+                            return (
+                              <React.Fragment key={`tab2-${weekKey}`}>
+                                <TableRow
+                                  hover
+                                  sx={{
+                                    backgroundColor: '#f5f5f5',
+                                    cursor: 'pointer',
+                                    '&:hover': { backgroundColor: '#eeeeee' }
+                                  }}
+                                  onClick={() => toggleWeek(weekKey)}
+                                >
+                                  <TableCell>
+                                    <IconButton size="small" sx={{ ml: 2 }}>
+                                      {expandedWeeks.has(weekKey) ? (
+                                        <KeyboardArrowDownIcon fontSize="small" />
+                                      ) : (
+                                        <KeyboardArrowRightIcon fontSize="small" />
+                                      )}
+                                    </IconButton>
+                                  </TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell sx={{ pl: 4 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {weekRow.weekLabel} ({weekRow.dateRange})
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalImpressions)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalClicks)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatCurrency(weekCPC)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatCurrency(weekRow.totalCost)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{weekCTR.toFixed(2)}%</strong></TableCell>
+                                </TableRow>
+
+                                {expandedWeeks.has(weekKey) && weekRow.campaigns
+                                  .filter(campaign => !campaign.deletedAt) // 삭제된 캠페인 제외
+                                  .map((campaign) => {
+                                  const isEditable = campaign.source === 'manual';
+                                  const isApiData = campaign.source === 'api';
+                                  const campaignCPC = campaign.clicks > 0 ? campaign.cost / campaign.clicks : 0;
+                                  const campaignCTR = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions * 100) : 0;
+
+                                  return (
+                                    <TableRow key={`tab2-${campaign.id}`} hover sx={{ backgroundColor: '#fafafa' }}>
+                                      <TableCell></TableCell>
+                                      <TableCell padding="checkbox">
+                                        <Checkbox
+                                          checked={selectedCampaigns.has(campaign.id)}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            toggleCampaignSelection(campaign.id);
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell></TableCell>
+                                      <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Typography variant="body2" sx={{ color: '#666' }}>
+                                            {campaign.channel} - {campaign.campaign}
+                                          </Typography>
+                                          {isApiData && (
+                                            <LockIcon sx={{ fontSize: 14, color: '#999' }} titleAccess="API 데이터 (읽기 전용)" />
+                                          )}
+                                        </Box>
+                                      </TableCell>
+                                      <TableCell align="right">{formatNumber(campaign.impressions)}</TableCell>
+                                      <TableCell align="right">{formatNumber(campaign.clicks)}</TableCell>
+                                      <TableCell align="right">{formatCurrency(campaignCPC)}</TableCell>
+                                      <TableCell align="right">{formatCurrency(campaign.cost)}</TableCell>
+                                      <TableCell align="right">{campaignCTR.toFixed(2)}%</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
