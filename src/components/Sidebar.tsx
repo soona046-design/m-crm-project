@@ -16,11 +16,13 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
+  LogOut,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface MenuItem {
   icon: any;
@@ -54,6 +56,8 @@ const menuItems: MenuItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuth()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   const toggleExpand = (label: string) => {
@@ -64,14 +68,19 @@ export function Sidebar() {
     )
   }
 
+  const handleLogout = async () => {
+    await logout()
+    router.push('/login')
+  }
+
   return (
-    <aside className="w-64 border-r border-sidebar-border bg-sidebar shadow-lg">
+    <aside className="w-64 border-r border-sidebar-border bg-sidebar shadow-lg flex flex-col h-screen">
       <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
         <Menu className="h-5 w-5 text-sidebar-foreground" />
         <span className="text-xl font-bold text-sidebar-foreground">MCRM</span>
       </div>
 
-      <nav className="space-y-1 p-3">
+      <nav className="flex-1 space-y-1 p-3">
         {menuItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -137,6 +146,31 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {user && (
+        <div className="border-t border-sidebar-border p-3">
+          <div className="rounded-lg bg-sidebar-accent/50 px-3 py-2 mb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <User className="h-4 w-4 text-sidebar-foreground/70" />
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {user.name || user.email}
+              </span>
+            </div>
+            {user.role && (
+              <p className="text-xs text-sidebar-foreground/60 ml-6">
+                {user.role}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            로그아웃
+          </button>
+        </div>
+      )}
     </aside>
   )
 }
