@@ -39,6 +39,7 @@ interface NewLead {
   revenue?: number;
   treatment: string[]; // 문의서비스 (다중 선택)
   consultation_notes?: string;
+  inquiry_date?: string; // 문의 날짜
 }
 
 interface FilterState {
@@ -122,20 +123,52 @@ export default function LeadsPage() {
     assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
     revenue: 0,
     treatment: [], // 문의서비스 초기값 (빈 배열)
-    consultation_notes: ''
+    consultation_notes: '',
+    inquiry_date: new Date().toISOString().split('T')[0] // 오늘 날짜를 기본값으로 설정
   });
 
   // 사용 가능한 캠페인 목록 상태
   const [availableCampaigns, setAvailableCampaigns] = useState<string[]>([]);
 
-  // Mock implementation for development
+  // API 연동 (localStorage fallback)
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Check if leads exist in localStorage (클라이언트에서만)
       let allLeads: Lead[];
 
+      // 1. 먼저 백엔드 API 호출 시도
+      try {
+        const response = await api.get('/api/leads', {
+          params: {
+            page: page + 1, // Laravel은 1-based pagination
+            per_page: rowsPerPage,
+            search: searchTerm || undefined,
+            status: appliedFilters.status.length > 0 ? appliedFilters.status.join(',') : undefined,
+            channel: appliedFilters.channel.length > 0 ? appliedFilters.channel.join(',') : undefined,
+            assignee: appliedFilters.assignee.length > 0 ? appliedFilters.assignee.join(',') : undefined,
+            sla_status: appliedFilters.slaStatus.length > 0 ? appliedFilters.slaStatus.join(',') : undefined,
+            score_min: appliedFilters.scoreRange[0] !== 0 ? appliedFilters.scoreRange[0] : undefined,
+            score_max: appliedFilters.scoreRange[1] !== 100 ? appliedFilters.scoreRange[1] : undefined,
+            date_from: appliedFilters.dateRange.start || undefined,
+            date_to: appliedFilters.dateRange.end || undefined,
+          }
+        });
+
+        // API 성공 시
+        if (response.data && response.data.data) {
+          allLeads = response.data.data;
+          setTotalLeads(response.data.total || allLeads.length);
+          setLeads(allLeads);
+          setLoading(false);
+          return; // API 성공하면 여기서 종료
+        }
+      } catch (apiError) {
+        console.warn('API 호출 실패, localStorage fallback 사용:', apiError);
+        // API 실패 시 localStorage로 fallback
+      }
+
+      // 2. API 실패 시 localStorage 사용 (기존 로직)
       // Mock leads data (default data)
       const mockLeads: Lead[] = [
         {
@@ -616,7 +649,8 @@ export default function LeadsPage() {
       assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
       revenue: 0,
       treatment: [], // 문의서비스 초기값 (빈 배열)
-      consultation_notes: ''
+      consultation_notes: '',
+      inquiry_date: new Date().toISOString().split('T')[0] // 오늘 날짜를 기본값으로 설정
     });
     setAvailableCampaigns([]);
   }, [user?.name]);
@@ -625,10 +659,43 @@ export default function LeadsPage() {
     try {
       setLoading(true);
 
-      // Mock implementation for development
+      // 1. 먼저 백엔드 API 호출 시도
+      try {
+        const response = await api.post('/api/leads', {
+          name: newLead.name,
+          primary_phone: newLead.primary_phone,
+          status: newLead.status,
+          utm_source: newLead.utm_source.length > 0 ? newLead.utm_source[0] : null, // 첫 번째 채널 사용
+          utm_campaign: newLead.utm_campaign || null,
+          score: newLead.score,
+          assignee_name: newLead.assignee_name,
+          revenue: newLead.revenue || 0,
+          treatment: newLead.treatment,
+          consultation_notes: newLead.consultation_notes,
+          inquiry_date: newLead.inquiry_date,
+        });
+
+        // API 성공 시
+        if (response.data) {
+          console.log('New lead created via API:', response.data);
+
+          // 리드 목록 새로고침
+          fetchLeads();
+
+          // 모달 닫기
+          handleCloseAddLeadModal();
+
+          alert('새 리드가 성공적으로 등록되었습니다!');
+          return; // API 성공하면 여기서 종료
+        }
+      } catch (apiError) {
+        console.warn('API 호출 실패, localStorage fallback 사용:', apiError);
+        // API 실패 시 localStorage로 fallback
+      }
+
+      // 2. API 실패 시 localStorage 사용 (기존 로직)
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
 
-      // localStorage에서 기존 리드 목록 가져와서 ID 생성 (클라이언트에서만)
       let existingLeads: Lead[] = [];
 
       if (typeof window !== 'undefined') {
@@ -638,10 +705,8 @@ export default function LeadsPage() {
         }
       }
 
-      // 새 리드 ID 생성 (기존 리드 개수 + 1)
       const newLeadId = `lead_${String(existingLeads.length + 1).padStart(3, '0')}`;
 
-      // 새 리드 객체 생성
       const createdLead: Lead = {
         lead_id: newLeadId,
         name: newLead.name,
@@ -651,7 +716,9 @@ export default function LeadsPage() {
         status: newLead.status,
         utm_source: newLead.utm_source,
         utm_campaign: newLead.utm_campaign,
-        last_contact_at: new Date().toISOString(),
+        last_contact_at: newLead.inquiry_date
+          ? new Date(newLead.inquiry_date).toISOString()
+          : new Date().toISOString(),
         score: newLead.score,
         assignee_name: newLead.assignee_name,
         sla_status: '정상',
@@ -661,23 +728,18 @@ export default function LeadsPage() {
         consultation_notes: newLead.consultation_notes
       };
 
-      console.log('New lead created:', createdLead);
+      console.log('New lead created (localStorage):', createdLead);
 
-      // 새 리드를 기존 목록에 추가
       const updatedLeads = [...existingLeads, createdLead];
 
-      // localStorage에 업데이트된 목록 저장 (클라이언트에서만)
       if (typeof window !== 'undefined') {
         localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
       }
 
-      // 리드 목록 새로고침
       fetchLeads();
-
-      // 모달 닫기
       handleCloseAddLeadModal();
 
-      alert('새 리드가 성공적으로 등록되었습니다!');
+      alert('새 리드가 성공적으로 등록되었습니다! (로컬 저장)');
     } catch (err) {
       console.error('Failed to create new lead:', err);
       alert('리드 등록에 실패했습니다. 다시 시도해주세요.');
@@ -728,6 +790,17 @@ export default function LeadsPage() {
               placeholder="010-1234-5678"
               fullWidth
               required
+            />
+            <TextField
+              label="문의 날짜"
+              type="date"
+              value={newLead.inquiry_date}
+              onChange={(e) => handleNewLeadChange('inquiry_date', e.target.value)}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              helperText="문의가 들어온 날짜를 선택하세요"
             />
             <FormControl fullWidth>
               <InputLabel>상태</InputLabel>
