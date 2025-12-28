@@ -87,6 +87,9 @@ interface PivotTableData {
   id: string;
   channel: string;
   campaign: string;
+  category_code?: string; // 'online', 'offline', 'db'
+  category_name?: string; // '온라인', '오프라인', 'DB'
+  category_color?: string; // '#2196F3', '#FF9800', '#4CAF50'
   year: number;
   month: number;
   week: number;
@@ -177,6 +180,32 @@ interface SummaryMetrics {
   averageROI: number;
   averageConversionRate: number;
 }
+
+// 채널 카테고리 매핑 함수
+const getCategoryForChannel = (channel: string): { code: string; name: string; color: string } => {
+  const channelLower = channel.toLowerCase();
+
+  // 온라인 채널
+  const onlineKeywords = ['google', 'naver', 'facebook', 'instagram', 'youtube', 'kakao', 'meta', 'ads', '광고', '검색', 'sns', 'social'];
+  if (onlineKeywords.some(keyword => channelLower.includes(keyword))) {
+    return { code: 'online', name: '온라인', color: '#2196F3' };
+  }
+
+  // 오프라인 채널
+  const offlineKeywords = ['전단', '현수막', '간판', '포스터', '전화', '방문', '오프라인', '지역', '매장'];
+  if (offlineKeywords.some(keyword => channelLower.includes(keyword))) {
+    return { code: 'offline', name: '오프라인', color: '#FF9800' };
+  }
+
+  // DB 채널
+  const dbKeywords = ['db', '데이터베이스', '기존고객', '재방문', '추천', '소개'];
+  if (dbKeywords.some(keyword => channelLower.includes(keyword))) {
+    return { code: 'db', name: 'DB', color: '#4CAF50' };
+  }
+
+  // 기본값: 온라인으로 분류
+  return { code: 'online', name: '온라인', color: '#2196F3' };
+};
 
 export default function ChannelPivotDashboardPage() {
   // 탭 상태
@@ -715,10 +744,16 @@ export default function ChannelPivotDashboardPage() {
     // 월 내부 주차 계산 (1-7일: 1주차, 8-14일: 2주차, ...)
     const week = Math.ceil(day / 7);
 
+    // 채널 카테고리 자동 매핑
+    const category = getCategoryForChannel(newCampaign.channel);
+
     const campaign: PivotTableData = {
       id: `campaign_${Date.now()}`,
       channel: newCampaign.channel,
       campaign: newCampaign.campaign,
+      category_code: category.code,
+      category_name: category.name,
+      category_color: category.color,
       year,
       month,
       week,
@@ -885,10 +920,16 @@ export default function ChannelPivotDashboardPage() {
           const ctr = impressions > 0 ? (clicks / impressions * 100) : 0;
           const cpc = clicks > 0 ? cost / clicks : 0;
 
+          // 채널 카테고리 자동 매핑
+          const category = getCategoryForChannel(row.channel);
+
           newCampaigns.push({
             id: `campaign_${Date.now()}_${index}`,
             channel: row.channel,
             campaign: row.campaign,
+            category_code: category.code,
+            category_name: category.name,
+            category_color: category.color,
             year,
             month,
             week,
