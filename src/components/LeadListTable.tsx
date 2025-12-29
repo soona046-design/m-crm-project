@@ -41,6 +41,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { getPriorityInfoFromScore } from '@/lib/leadPriority';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/axios';
 
 interface Note {
   id: string;
@@ -168,39 +169,62 @@ export default function LeadListTable({
   const isSelected = (id: string) => selectedLeadIds.indexOf(id) !== -1;
 
   // 일괄 삭제 핸들러
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedLeadIds.length === 0) return;
 
     if (confirm(`선택한 ${selectedLeadIds.length}개의 문의를 휴지통으로 이동하시겠습니까?`)) {
-      // 선택된 리드들을 찾아서 휴지통으로 이동
-      const leadsToTrash = leads.filter(lead => selectedLeadIds.includes(lead.lead_id));
+      try {
+        // 1. 먼저 백엔드 API 삭제 시도
+        try {
+          // 각 리드에 대해 DELETE 요청
+          const deletePromises = selectedLeadIds.map(leadId =>
+            api.delete(`/api/leads/${leadId}`)
+          );
+          await Promise.all(deletePromises);
 
-      // localStorage에 휴지통 데이터 추가
-      if (typeof window !== 'undefined') {
-        const existingTrash = localStorage.getItem('mcrm_deleted_leads');
-        const trashLeads = existingTrash ? JSON.parse(existingTrash) : [];
-
-        // 삭제된 시간 추가
-        const leadsWithDeleteTime = leadsToTrash.map(lead => ({
-          ...lead,
-          deleted_at: new Date().toISOString(),
-        }));
-
-        localStorage.setItem('mcrm_deleted_leads', JSON.stringify([...trashLeads, ...leadsWithDeleteTime]));
-
-        // 원본 리드 목록에서 제거
-        const currentLeads = localStorage.getItem('mcrm_leads');
-        if (currentLeads) {
-          const allLeads = JSON.parse(currentLeads);
-          const updatedLeads = allLeads.filter((lead: Lead) => !selectedLeadIds.includes(lead.lead_id));
-          localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
+          // API 성공 시
+          setSelectedLeadIds([]);
+          onRefresh();
+          alert(`${selectedLeadIds.length}개의 문의가 삭제되었습니다.`);
+          return; // API 성공하면 여기서 종료
+        } catch (apiError) {
+          console.warn('API 삭제 실패, localStorage fallback 사용:', apiError);
+          // API 실패 시 localStorage로 fallback
         }
-      }
 
-      // 선택 해제 및 새로고침
-      setSelectedLeadIds([]);
-      onRefresh();
-      alert(`${selectedLeadIds.length}개의 문의가 휴지통으로 이동되었습니다.`);
+        // 2. API 실패 시 localStorage 사용 (기존 로직)
+        const leadsToTrash = leads.filter(lead => selectedLeadIds.includes(lead.lead_id));
+
+        // localStorage에 휴지통 데이터 추가
+        if (typeof window !== 'undefined') {
+          const existingTrash = localStorage.getItem('mcrm_deleted_leads');
+          const trashLeads = existingTrash ? JSON.parse(existingTrash) : [];
+
+          // 삭제된 시간 추가
+          const leadsWithDeleteTime = leadsToTrash.map(lead => ({
+            ...lead,
+            deleted_at: new Date().toISOString(),
+          }));
+
+          localStorage.setItem('mcrm_deleted_leads', JSON.stringify([...trashLeads, ...leadsWithDeleteTime]));
+
+          // 원본 리드 목록에서 제거
+          const currentLeads = localStorage.getItem('mcrm_leads');
+          if (currentLeads) {
+            const allLeads = JSON.parse(currentLeads);
+            const updatedLeads = allLeads.filter((lead: Lead) => !selectedLeadIds.includes(lead.lead_id));
+            localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
+          }
+        }
+
+        // 선택 해제 및 새로고침
+        setSelectedLeadIds([]);
+        onRefresh();
+        alert(`${selectedLeadIds.length}개의 문의가 휴지통으로 이동되었습니다. (로컬 저장)`);
+      } catch (err) {
+        console.error('Failed to delete leads:', err);
+        alert('삭제에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   };
 
@@ -672,41 +696,58 @@ export default function LeadListTable({
                         <MenuItem onClick={() => { handleMenuClose(lead.lead_id); alert(`${lead.name} 문의 보류 기능은 곧 구현됩니다.`); }}>
                           ⏸️ 보류
                         </MenuItem>
-                        <MenuItem onClick={() => {
+                        <MenuItem onClick={async () => {
                           handleMenuClose(lead.lead_id);
                           if (confirm(`정말로 ${lead.name} 문의를 휴지통으로 이동하시겠습니까?`)) {
-                            // 휴지통으로 이동 로직
-                            if (typeof window !== 'undefined') {
-                              const storedLeads = localStorage.getItem('mcrm_leads');
-                              const storedDeletedLeads = localStorage.getItem('mcrm_deleted_leads');
+                            try {
+                              // 1. 먼저 백엔드 API 삭제 시도
+                              try {
+                                await api.delete(`/api/leads/${lead.lead_id}`);
+                                // API 성공 시
+                                alert('문의가 삭제되었습니다.');
+                                onRefresh();
+                                return; // API 성공하면 여기서 종료
+                              } catch (apiError) {
+                                console.warn('API 삭제 실패, localStorage fallback 사용:', apiError);
+                                // API 실패 시 localStorage로 fallback
+                              }
 
-                              if (storedLeads) {
-                                const allLeads = JSON.parse(storedLeads);
-                                const deletedLeads = storedDeletedLeads ? JSON.parse(storedDeletedLeads) : [];
+                              // 2. API 실패 시 localStorage 사용 (기존 로직)
+                              if (typeof window !== 'undefined') {
+                                const storedLeads = localStorage.getItem('mcrm_leads');
+                                const storedDeletedLeads = localStorage.getItem('mcrm_deleted_leads');
 
-                                // 삭제할 리드 찾기
-                                const leadToDelete = allLeads.find((l: Lead) => l.lead_id === lead.lead_id);
+                                if (storedLeads) {
+                                  const allLeads = JSON.parse(storedLeads);
+                                  const deletedLeads = storedDeletedLeads ? JSON.parse(storedDeletedLeads) : [];
 
-                                if (leadToDelete) {
-                                  // 삭제 시간 추가
-                                  const deletedLead = {
-                                    ...leadToDelete,
-                                    deleted_at: new Date().toISOString(),
-                                  };
+                                  // 삭제할 리드 찾기
+                                  const leadToDelete = allLeads.find((l: Lead) => l.lead_id === lead.lead_id);
 
-                                  // 활성 리드 목록에서 제거
-                                  const updatedLeads = allLeads.filter((l: Lead) => l.lead_id !== lead.lead_id);
+                                  if (leadToDelete) {
+                                    // 삭제 시간 추가
+                                    const deletedLead = {
+                                      ...leadToDelete,
+                                      deleted_at: new Date().toISOString(),
+                                    };
 
-                                  // 휴지통에 추가
-                                  deletedLeads.push(deletedLead);
+                                    // 활성 리드 목록에서 제거
+                                    const updatedLeads = allLeads.filter((l: Lead) => l.lead_id !== lead.lead_id);
 
-                                  localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
-                                  localStorage.setItem('mcrm_deleted_leads', JSON.stringify(deletedLeads));
+                                    // 휴지통에 추가
+                                    deletedLeads.push(deletedLead);
 
-                                  alert('문의가 휴지통으로 이동되었습니다.');
-                                  onRefresh();
+                                    localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
+                                    localStorage.setItem('mcrm_deleted_leads', JSON.stringify(deletedLeads));
+
+                                    alert('문의가 휴지통으로 이동되었습니다. (로컬 저장)');
+                                    onRefresh();
+                                  }
                                 }
                               }
+                            } catch (err) {
+                              console.error('Failed to delete lead:', err);
+                              alert('삭제에 실패했습니다. 다시 시도해주세요.');
                             }
                           }
                         }}>
