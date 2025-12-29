@@ -152,6 +152,8 @@ export default function LeadsPage() {
             score_max: appliedFilters.scoreRange[1] !== 100 ? appliedFilters.scoreRange[1] : undefined,
             date_from: appliedFilters.dateRange.start || undefined,
             date_to: appliedFilters.dateRange.end || undefined,
+            sort: 'created_at',
+            order: 'desc', // 최신순 정렬
           }
         });
 
@@ -679,6 +681,9 @@ export default function LeadsPage() {
         if (response.data) {
           console.log('New lead created via API:', response.data);
 
+          // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
+          setPage(0);
+
           // 리드 목록 새로고침
           fetchLeads();
 
@@ -735,6 +740,9 @@ export default function LeadsPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
       }
+
+      // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
+      setPage(0);
 
       fetchLeads();
       handleCloseAddLeadModal();
