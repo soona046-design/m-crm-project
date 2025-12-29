@@ -663,18 +663,28 @@ export default function LeadsPage() {
 
       // 1. 먼저 백엔드 API 호출 시도
       try {
+        // 상태 값을 백엔드 형식으로 변환
+        const statusMap: { [key: string]: string } = {
+          '신규': 'new',
+          '상담완료': 'contacted',
+          '미팅완료': 'converted',
+          '계약완료': 'closed',
+          '보류': 'pending',
+          '거절': 'rejected',
+        };
+
         const response = await api.post('/api/leads', {
           name: newLead.name,
           primary_phone: newLead.primary_phone,
-          status: newLead.status,
-          utm_source: newLead.utm_source.length > 0 ? newLead.utm_source[0] : null, // 첫 번째 채널 사용
-          utm_campaign: newLead.utm_campaign || null,
+          status: statusMap[newLead.status] || 'new',
           score: newLead.score,
-          assignee_name: newLead.assignee_name,
-          revenue: newLead.revenue || 0,
-          treatment: newLead.treatment,
-          consultation_notes: newLead.consultation_notes,
-          inquiry_date: newLead.inquiry_date,
+          memo: [
+            newLead.consultation_notes,
+            newLead.treatment.length > 0 ? `문의서비스: ${newLead.treatment.join(', ')}` : '',
+            newLead.inquiry_date ? `문의날짜: ${newLead.inquiry_date}` : '',
+          ].filter(Boolean).join('\n'),
+          // assigned_user_id는 일단 null (사용자 매핑 필요)
+          // utm_source는 Visit을 통해 연결되어야 하므로 일단 생략
         });
 
         // API 성공 시
