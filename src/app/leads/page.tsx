@@ -678,11 +678,8 @@ export default function LeadsPage() {
           primary_phone: newLead.primary_phone,
           status: statusMap[newLead.status] || 'new',
           score: newLead.score,
-          memo: [
-            newLead.consultation_notes,
-            newLead.treatment.length > 0 ? `문의서비스: ${newLead.treatment.join(', ')}` : '',
-            newLead.inquiry_date ? `문의날짜: ${newLead.inquiry_date}` : '',
-          ].filter(Boolean).join('\n'),
+          // memo: 백엔드 테이블에 컬럼이 없어서 임시 제거
+          // TODO: Cafe24 서버에 memo 컬럼 추가 후 활성화
           // assigned_user_id는 일단 null (사용자 매핑 필요)
           // utm_source는 Visit을 통해 연결되어야 하므로 일단 생략
         });
