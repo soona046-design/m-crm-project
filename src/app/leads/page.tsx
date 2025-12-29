@@ -707,7 +707,12 @@ export default function LeadsPage() {
           return; // API 성공하면 여기서 종료
         }
       } catch (apiError: any) {
-        console.warn('API 호출 실패:', apiError);
+        console.error('❌ API 호출 실패:', {
+          status: apiError.response?.status,
+          statusText: apiError.response?.statusText,
+          data: apiError.response?.data,
+          message: apiError.message,
+        });
 
         // 401 에러인 경우 로그인 페이지로 리다이렉트
         if (apiError.response?.status === 401) {
@@ -718,8 +723,17 @@ export default function LeadsPage() {
           return;
         }
 
+        // 400 에러 (Validation 오류)
+        if (apiError.response?.status === 400 || apiError.response?.status === 422) {
+          const errors = apiError.response?.data?.errors;
+          const message = apiError.response?.data?.message;
+          console.error('📝 Validation 오류:', { message, errors });
+          alert(`입력 오류: ${message || '입력값을 확인해주세요'}`);
+          return;
+        }
+
         // 다른 에러는 localStorage로 fallback
-        console.warn('localStorage fallback 사용');
+        console.warn('⚠️ localStorage fallback 사용');
       }
 
       // 2. API 실패 시 localStorage 사용 (기존 로직)
