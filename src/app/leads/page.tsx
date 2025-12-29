@@ -706,9 +706,20 @@ export default function LeadsPage() {
           alert('새 리드가 성공적으로 등록되었습니다!');
           return; // API 성공하면 여기서 종료
         }
-      } catch (apiError) {
-        console.warn('API 호출 실패, localStorage fallback 사용:', apiError);
-        // API 실패 시 localStorage로 fallback
+      } catch (apiError: any) {
+        console.warn('API 호출 실패:', apiError);
+
+        // 401 에러인 경우 로그인 페이지로 리다이렉트
+        if (apiError.response?.status === 401) {
+          alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login?redirect=/leads';
+          }
+          return;
+        }
+
+        // 다른 에러는 localStorage로 fallback
+        console.warn('localStorage fallback 사용');
       }
 
       // 2. API 실패 시 localStorage 사용 (기존 로직)
