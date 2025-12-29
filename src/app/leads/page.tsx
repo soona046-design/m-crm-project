@@ -668,7 +668,7 @@ export default function LeadsPage() {
           '신규': 'new',
           '상담완료': 'contacted',
           '미팅완료': 'converted',
-          '계약완료': 'closed',
+          '계약완료': 'converted', // 백엔드에 'closed' 없음, converted 사용
           '보류': 'pending',
           '거절': 'rejected',
         };
@@ -713,6 +713,13 @@ export default function LeadsPage() {
           data: apiError.response?.data,
           message: apiError.message,
         });
+
+        // 500 에러의 상세 내용 출력
+        if (apiError.response?.status === 500) {
+          console.error('🔥 서버 에러 상세:', apiError.response?.data);
+          alert(`서버 오류가 발생했습니다.\n\n에러: ${apiError.response?.data?.message || '알 수 없는 오류'}\n\n개발자 콘솔을 확인해주세요.`);
+          return;
+        }
 
         // 401 에러인 경우 로그인 페이지로 리다이렉트
         if (apiError.response?.status === 401) {
