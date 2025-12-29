@@ -681,14 +681,17 @@ export default function LeadsPage() {
         if (response.data) {
           console.log('New lead created via API:', response.data);
 
-          // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
-          setPage(0);
-
-          // 리드 목록 새로고침
-          fetchLeads();
-
           // 모달 닫기
           handleCloseAddLeadModal();
+
+          // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
+          if (page === 0) {
+            // 이미 첫 페이지면 수동으로 새로고침
+            fetchLeads();
+          } else {
+            // 다른 페이지면 첫 페이지로 이동 (useEffect가 자동으로 fetchLeads 호출)
+            setPage(0);
+          }
 
           alert('새 리드가 성공적으로 등록되었습니다!');
           return; // API 성공하면 여기서 종료
@@ -741,11 +744,17 @@ export default function LeadsPage() {
         localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
       }
 
-      // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
-      setPage(0);
-
-      fetchLeads();
+      // 모달 닫기
       handleCloseAddLeadModal();
+
+      // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
+      if (page === 0) {
+        // 이미 첫 페이지면 수동으로 새로고침
+        fetchLeads();
+      } else {
+        // 다른 페이지면 첫 페이지로 이동 (useEffect가 자동으로 fetchLeads 호출)
+        setPage(0);
+      }
 
       alert('새 리드가 성공적으로 등록되었습니다! (로컬 저장)');
     } catch (err) {
@@ -754,7 +763,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [newLead, fetchLeads, handleCloseAddLeadModal]);
+  }, [newLead, fetchLeads, handleCloseAddLeadModal, page]);
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
