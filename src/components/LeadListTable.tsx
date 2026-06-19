@@ -398,18 +398,31 @@ export default function LeadListTable({
   };
 
   // 메모 추가 처리
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteContent.trim() || !selectedLeadForNote) return;
 
-    const note: Note = {
-      id: `note_${Date.now()}`,
-      content: noteContent,
-      created_at: new Date().toISOString(),
-      created_by: '현재 사용자',
-    };
+    const existingMemo = (selectedLeadForNote as any).memo || '';
+    const updatedMemo = existingMemo ? `${existingMemo}\n---\n${noteContent}` : noteContent;
 
-    // localStorage 업데이트
+    // 1. 백엔드 API 호출 시도
+    try {
+      await api.put(`/api/leads/${selectedLeadForNote.lead_id}`, { memo: updatedMemo });
+      alert('메모가 추가되었습니다.');
+      handleCloseNoteDialog();
+      onRefresh();
+      return;
+    } catch (apiError) {
+      console.warn('메모 API 저장 실패, localStorage fallback:', apiError);
+    }
+
+    // 2. API 실패 시 localStorage fallback
     if (typeof window !== 'undefined') {
+      const note: Note = {
+        id: `note_${Date.now()}`,
+        content: noteContent,
+        created_at: new Date().toISOString(),
+        created_by: '현재 사용자',
+      };
       const storedLeads = localStorage.getItem('mcrm_leads');
       if (storedLeads) {
         const allLeads: Lead[] = JSON.parse(storedLeads);
@@ -423,11 +436,14 @@ export default function LeadListTable({
           return l;
         });
         localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
-        alert('메모가 추가되었습니다.');
+        alert('메모가 추가되었습니다. (로컬 저장)');
         handleCloseNoteDialog();
-        onRefresh(); // 목록 새로고침
+        onRefresh();
+        return;
       }
     }
+
+    alert('메모 저장에 실패했습니다.');
   };
 
   // 배정 다이얼로그 열기
