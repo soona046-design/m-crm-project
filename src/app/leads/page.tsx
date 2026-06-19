@@ -36,6 +36,7 @@ interface NewLead {
   utm_campaign?: string; // 캠페인 추가
   score: number;
   assignee_name: string;
+  assigned_user_id?: string; // 실제 담당자 UUID
   revenue?: number;
   treatment: string[]; // 문의서비스 (다중 선택)
   consultation_notes?: string;
@@ -111,16 +112,18 @@ export default function LeadsPage() {
   // 채널 관리에서 가져온 활성 채널 목록
   const [availableChannels, setAvailableChannels] = useState<string[]>([]);
 
-  // 새 리드 등록 모달 상태
+  // 새 리드 등록 / 수정 모달 상태
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null); // null이면 신규, 값 있으면 수정
   const [newLead, setNewLead] = useState<NewLead>({
     name: '',
     primary_phone: '',
-    status: '상담완료',
+    status: '신규',
     utm_source: [], // 인입경로 초기값 (빈 배열)
     utm_campaign: '', // 캠페인 초기값
     score: 50,
-    assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
+    assignee_name: user?.name || '',
+    assigned_user_id: '',
     revenue: 0,
     treatment: [], // 문의서비스 초기값 (빈 배열)
     consultation_notes: '',
@@ -454,6 +457,13 @@ export default function LeadsPage() {
     setPage(0); // 필터 적용 시 첫 페이지로 이동
   }, []);
 
+  // 특정 리드 로컬 상태 업데이트 (re-fetch 없이)
+  const handleLeadUpdate = useCallback((leadId: string, updates: Partial<Lead>) => {
+    setLeads(prev => prev.map(lead =>
+      lead.lead_id === leadId ? { ...lead, ...updates } : lead
+    ));
+  }, []);
+
   const handleExportClick = useCallback(() => {
     try {
       // localStorage에서 모든 리드 데이터 가져오기
@@ -569,6 +579,22 @@ export default function LeadsPage() {
     }
   }, []);
 
+  // 실제 사용자 목록을 API에서 가져오기
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await api.get('/api/users');
+      const users = response.data?.data || response.data;
+      if (Array.isArray(users)) {
+        const assignees = users
+          .filter((u: any) => ['counselor', '상담매니저', '지점관리자', 'branch_manager'].includes(u.role))
+          .map((u: any) => ({ user_id: u.user_id, name: u.name, role: u.role }));
+        if (assignees.length > 0) setAvailableAssignees(assignees);
+      }
+    } catch (error) {
+      console.warn('사용자 목록 API 실패, 기본값 사용');
+    }
+  }, []);
+
   // 채널 관리 API에서 활성 채널 목록 가져오기
   const fetchChannels = useCallback(async () => {
     try {
@@ -585,10 +611,11 @@ export default function LeadsPage() {
     }
   }, []);
 
-  // 컴포넌트 마운트 시 채널 목록 로드
+  // 컴포넌트 마운트 시 채널 목록 및 사용자 목록 로드
   useEffect(() => {
     fetchChannels();
-  }, [fetchChannels]);
+    fetchUsers();
+  }, [fetchChannels, fetchUsers]);
 
   const handleNewLeadChange = useCallback((field: keyof NewLead, value: string | number) => {
     setNewLead(prev => ({
@@ -596,6 +623,16 @@ export default function LeadsPage() {
       [field]: value
     }));
   }, []);
+
+  // 담당자 선택 핸들러 (user_id + name 동시 업데이트)
+  const handleAssigneeChange = useCallback((userId: string) => {
+    const assignee = availableAssignees.find(a => a.user_id === userId);
+    setNewLead(prev => ({
+      ...prev,
+      assigned_user_id: userId,
+      assignee_name: assignee?.name || '',
+    }));
+  }, [availableAssignees]);
 
   // 인입경로 체크박스 토글
   const handleToggleChannel = useCallback((channel: string) => {
@@ -634,25 +671,58 @@ export default function LeadsPage() {
   }, []);
 
   const handleAddLeadClick = useCallback(() => {
-    // 모달을 열 때마다 최신 담당자 목록 업데이트
+    setEditingLeadId(null);
     setAvailableAssignees(getAvailableAssignees());
     setAddLeadModalOpen(true);
   }, [getAvailableAssignees]);
 
+  const handleEditLeadClick = useCallback((lead: Lead) => {
+    const utmSources = Array.isArray(lead.utm_source)
+      ? lead.utm_source.filter(Boolean)
+      : (lead.utm_source ? [lead.utm_source] : []);
+    const treatments = Array.isArray(lead.treatment)
+      ? lead.treatment.filter(Boolean)
+      : (lead.treatment ? [lead.treatment as string] : []);
+
+    // availableAssignees에서 assignee_id 찾기
+    const assignee = availableAssignees.find(a => a.name === lead.assignee_name);
+
+    setEditingLeadId(lead.lead_id);
+    setNewLead({
+      name: lead.name,
+      primary_phone: lead.primary_phone,
+      status: lead.status,
+      utm_source: utmSources,
+      utm_campaign: lead.utm_campaign || '',
+      score: lead.score,
+      assignee_name: lead.assignee_name,
+      assigned_user_id: assignee?.user_id || '',
+      revenue: lead.revenue || 0,
+      treatment: treatments,
+      consultation_notes: lead.consultation_notes || '',
+      inquiry_date: lead.last_contact_at
+        ? new Date(lead.last_contact_at).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+    });
+    setAddLeadModalOpen(true);
+  }, [availableAssignees]);
+
   const handleCloseAddLeadModal = useCallback(() => {
     setAddLeadModalOpen(false);
+    setEditingLeadId(null);
     setNewLead({
       name: '',
       primary_phone: '',
       status: '신규',
-      utm_source: [], // 인입경로 초기값 (빈 배열)
+      utm_source: [],
       utm_campaign: '',
       score: 50,
-      assignee_name: user?.name || '김상담', // 현재 로그인된 사용자를 기본값으로 설정
+      assignee_name: user?.name || '',
+      assigned_user_id: '',
       revenue: 0,
-      treatment: [], // 문의서비스 초기값 (빈 배열)
+      treatment: [],
       consultation_notes: '',
-      inquiry_date: new Date().toISOString().split('T')[0] // 오늘 날짜를 기본값으로 설정
+      inquiry_date: new Date().toISOString().split('T')[0]
     });
     setAvailableCampaigns([]);
   }, [user?.name]);
@@ -661,60 +731,46 @@ export default function LeadsPage() {
     try {
       setLoading(true);
 
-      // 1. 먼저 백엔드 API 호출 시도
+      const statusMap: { [key: string]: string } = {
+        '신규': 'new',
+        '상담완료': 'contacted',
+        '미팅완료': 'converted',
+        '계약완료': 'converted',
+        '보류': 'pending',
+        '거절': 'rejected',
+      };
+
+      const payload = {
+        name: newLead.name,
+        primary_phone: newLead.primary_phone,
+        status: statusMap[newLead.status] || 'new',
+        score: newLead.score,
+        memo: newLead.consultation_notes || undefined,
+        assigned_user_id: newLead.assigned_user_id || undefined,
+        utm_source: newLead.utm_source.length > 0 ? newLead.utm_source.join(', ') : undefined,
+      };
+
+      // 1. 백엔드 API 호출
       try {
-        // 상태 값을 백엔드 형식으로 변환
-        const statusMap: { [key: string]: string } = {
-          '신규': 'new',
-          '상담완료': 'contacted',
-          '미팅완료': 'converted',
-          '계약완료': 'converted', // 백엔드에 'closed' 없음, converted 사용
-          '보류': 'pending',
-          '거절': 'rejected',
-        };
+        const response = editingLeadId
+          ? await api.put(`/api/leads/${editingLeadId}`, payload)
+          : await api.post('/api/leads', payload);
 
-        const response = await api.post('/api/leads', {
-          name: newLead.name,
-          primary_phone: newLead.primary_phone,
-          status: statusMap[newLead.status] || 'new',
-          score: newLead.score,
-          // memo: 백엔드 테이블에 컬럼이 없어서 임시 제거
-          // TODO: Cafe24 서버에 memo 컬럼 추가 후 활성화
-          // assigned_user_id는 일단 null (사용자 매핑 필요)
-          // utm_source는 Visit을 통해 연결되어야 하므로 일단 생략
-        });
-
-        // API 성공 시
         if (response.data) {
-          console.log('New lead created via API:', response.data);
-
-          // 모달 닫기
           handleCloseAddLeadModal();
-
-          // 첫 페이지로 이동 (새로 등록된 항목 확인을 위해)
-          if (page === 0) {
-            // 이미 첫 페이지면 수동으로 새로고침
-            fetchLeads();
-          } else {
-            // 다른 페이지면 첫 페이지로 이동 (useEffect가 자동으로 fetchLeads 호출)
-            setPage(0);
-          }
-
-          alert('새 리드가 성공적으로 등록되었습니다!');
-          return; // API 성공하면 여기서 종료
+          if (page === 0) fetchLeads(); else setPage(0);
+          alert(editingLeadId ? '문의가 수정되었습니다!' : '새 문의가 등록되었습니다!');
+          return;
         }
       } catch (apiError: any) {
         console.error('❌ API 호출 실패:', {
           status: apiError.response?.status,
-          statusText: apiError.response?.statusText,
           data: apiError.response?.data,
           message: apiError.message,
         });
 
-        // 500 에러의 상세 내용 출력
         if (apiError.response?.status === 500) {
-          console.error('🔥 서버 에러 상세:', apiError.response?.data);
-          alert(`서버 오류가 발생했습니다.\n\n에러: ${apiError.response?.data?.message || '알 수 없는 오류'}\n\n개발자 콘솔을 확인해주세요.`);
+          alert(`서버 오류: ${apiError.response?.data?.message || '알 수 없는 오류'}`);
           return;
         }
 
@@ -825,11 +881,13 @@ export default function LeadsPage() {
         onFilterClick={handleFilterClick}
         onExportClick={handleExportClick}
         onAddLeadClick={handleAddLeadClick}
+        onLeadUpdate={handleLeadUpdate}
+        onEditLead={handleEditLeadClick}
       />
 
       {/* 새 문의 등록 모달 */}
       <Dialog open={addLeadModalOpen} onClose={handleCloseAddLeadModal} maxWidth="sm" fullWidth>
-        <DialogTitle>새 문의 등록</DialogTitle>
+        <DialogTitle>{editingLeadId ? '문의 수정' : '새 문의 등록'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
@@ -904,12 +962,12 @@ export default function LeadsPage() {
             <FormControl fullWidth>
               <InputLabel>담당자</InputLabel>
               <Select
-                value={newLead.assignee_name}
+                value={newLead.assigned_user_id || ''}
                 label="담당자"
-                onChange={(e) => handleNewLeadChange('assignee_name', e.target.value)}
+                onChange={(e) => handleAssigneeChange(e.target.value)}
               >
                 {availableAssignees.map((assignee) => (
-                  <MenuItem key={assignee.user_id} value={assignee.name}>
+                  <MenuItem key={assignee.user_id} value={assignee.user_id}>
                     {assignee.name} ({assignee.role})
                   </MenuItem>
                 ))}
@@ -961,7 +1019,7 @@ export default function LeadsPage() {
             variant="contained"
             disabled={!newLead.name || !newLead.primary_phone}
           >
-            등록
+            {editingLeadId ? '저장' : '등록'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -79,10 +79,12 @@ interface LeadListTableProps {
   onPageChange: (event: unknown, newPage: number) => void;
   onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRefresh: () => void;
-  onSearchChange: (searchTerm: string) => void; // 검색어 변경 핸들러
-  onFilterClick: () => void; // 필터 버튼 클릭 핸들러
-  onExportClick: () => void; // CSV 내보내기 버튼 클릭 핸들러
-  onAddLeadClick: () => void; // 새 리드 버튼 클릭 핸들러
+  onSearchChange: (searchTerm: string) => void;
+  onFilterClick: () => void;
+  onExportClick: () => void;
+  onAddLeadClick: () => void;
+  onLeadUpdate?: (leadId: string, updates: Partial<Lead>) => void; // 특정 리드 로컬 상태 업데이트
+  onEditLead?: (lead: Lead) => void; // 수정 모달 열기
 }
 
 export default function LeadListTable({
@@ -97,6 +99,8 @@ export default function LeadListTable({
   onFilterClick,
   onExportClick,
   onAddLeadClick,
+  onLeadUpdate,
+  onEditLead,
 }: LeadListTableProps) {
   const router = useRouter();
   const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
@@ -230,7 +234,7 @@ export default function LeadListTable({
 
   // 이름 마스킹 함수 (예: 홍길동 -> 홍**동)
   const maskName = (name: string) => {
-    if (!name) return 'N/A';
+    if (!name) return '-';
     if (name.length <= 1) return name;
     if (name.length === 2) return name.charAt(0) + '*';
     return name.charAt(0) + '**' + name.slice(-1);
@@ -238,13 +242,13 @@ export default function LeadListTable({
 
   // 전화번호 마스킹 함수 (예: 010-1234-5678 -> 010-****-5678)
   const maskPhoneNumber = (phoneNumber: string) => {
-    if (!phoneNumber) return 'N/A';
+    if (!phoneNumber) return '-';
     return phoneNumber.replace(/(\d{3})-(\d{4})-(\d{4})/, '$1-****-$3');
   };
 
   // 날짜 포맷 함수 (YY/MM/DD)
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return '-';
     const date = new Date(dateString);
     const year = String(date.getFullYear()).slice(-2); // 마지막 2자리만
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -290,8 +294,28 @@ export default function LeadListTable({
   const isMenuOpen = (leadId: string) => Boolean(openMenus[leadId]);
 
   // 상태 변경 핸들러 (페이지 새로고침 없이)
-  const handleStatusChange = (leadId: string, newStatus: string) => {
-    // localStorage에서 리드 목록 가져오기
+  const handleStatusChange = async (leadId: string, newStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      '신규': 'new',
+      '상담완료': 'contacted',
+      '미팅완료': 'converted',
+      '계약완료': 'converted',
+      '보류': 'pending',
+      '거절': 'rejected',
+    };
+
+    // 1. 백엔드 API 호출 시도
+    try {
+      await api.put(`/api/leads/${leadId}`, {
+        status: statusMap[newStatus] || 'new',
+      });
+      onRefresh();
+      return;
+    } catch (apiError) {
+      console.warn('API 상태 업데이트 실패, localStorage fallback:', apiError);
+    }
+
+    // 2. API 실패 시 localStorage fallback
     if (typeof window !== 'undefined') {
       const storedLeads = localStorage.getItem('mcrm_leads');
       if (storedLeads) {
@@ -300,8 +324,6 @@ export default function LeadListTable({
           lead.lead_id === leadId ? { ...lead, status: newStatus } : lead
         );
         localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
-
-        // 새로고침 대신 onRefresh 호출
         onRefresh();
       }
     }
@@ -315,7 +337,9 @@ export default function LeadListTable({
     }));
     setSelectedLeadForChannel(lead.lead_id);
     // 현재 선택된 채널들을 임시 상태로 설정
-    const currentChannels = Array.isArray(lead.utm_source) ? lead.utm_source : [lead.utm_source];
+    const currentChannels = Array.isArray(lead.utm_source)
+      ? lead.utm_source.filter(Boolean)
+      : (lead.utm_source ? [lead.utm_source] : []);
     setTempChannels(currentChannels);
   };
 
@@ -340,22 +364,23 @@ export default function LeadListTable({
     });
   };
 
-  // 채널 변경 적용 (페이지 새로고침 없이)
-  const handleApplyChannelChange = (leadId: string) => {
-    if (typeof window !== 'undefined') {
-      const storedLeads = localStorage.getItem('mcrm_leads');
-      if (storedLeads) {
-        const allLeads: Lead[] = JSON.parse(storedLeads);
-        const updatedLeads = allLeads.map(lead =>
-          lead.lead_id === leadId ? { ...lead, utm_source: tempChannels.length > 0 ? tempChannels : ['기타'] } : lead
-        );
-        localStorage.setItem('mcrm_leads', JSON.stringify(updatedLeads));
+  // 채널 변경 적용
+  const handleApplyChannelChange = async (leadId: string) => {
+    const updatedChannels = tempChannels.length > 0 ? tempChannels : ['기타'];
+    const utmSourceValue = updatedChannels.join(', ');
 
-        // 새로고침 대신 onRefresh 호출
-        onRefresh();
-      }
+    // 1. 부모 상태 즉시 반영 (UI 반응성)
+    if (onLeadUpdate) {
+      onLeadUpdate(leadId, { utm_source: updatedChannels });
     }
     handleCloseChannelPopover(leadId);
+
+    // 2. 백엔드 API에 저장
+    try {
+      await api.put(`/api/leads/${leadId}`, { utm_source: utmSourceValue });
+    } catch (apiError) {
+      console.warn('채널 API 저장 실패:', apiError);
+    }
   };
 
   // 메모 추가 다이얼로그 열기
@@ -554,8 +579,10 @@ export default function LeadListTable({
                         }}
                       >
                         {(() => {
-                          const channels = Array.isArray(lead.utm_source) ? lead.utm_source : [lead.utm_source];
-                          return channels.length > 0 ? channels.join(', ') : '선택';
+                          const channels = Array.isArray(lead.utm_source)
+                            ? lead.utm_source.filter(Boolean)
+                            : (lead.utm_source ? [lead.utm_source] : []);
+                          return channels.length > 0 ? channels.join(', ') : '-';
                         })()}
                       </Button>
                       <Popover
@@ -684,8 +711,8 @@ export default function LeadListTable({
                           },
                         }}
                       >
-                        <MenuItem onClick={() => { handleMenuClose(lead.lead_id); router.push(`/leads/${lead.lead_id}`); }}>
-                          📋 보기
+                        <MenuItem onClick={() => { handleMenuClose(lead.lead_id); onEditLead?.(lead); }}>
+                          ✏️ 수정
                         </MenuItem>
                         <MenuItem onClick={() => { handleMenuClose(lead.lead_id); handleOpenAssignDialog(lead); }}>
                           👤 배정

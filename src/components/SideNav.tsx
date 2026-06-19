@@ -54,6 +54,7 @@ export default function SideNav({ mobileOpen, onDrawerToggle, currentDrawerWidth
     { text: '채널 피벗', icon: <AssessmentIcon />, href: '/channel-pivot' },
     { text: '에이전트 성과', icon: <PeopleIcon />, href: '/agent-performance' },
     { text: '퍼널 분석', icon: <AssessmentIcon />, href: '/funnel' },
+    { text: '광고 실적', icon: <AssessmentIcon />, href: '/ad-performance' },
     { text: '채널', icon: <ShareIcon />, href: '/channels' },
     { text: '채널 관리', icon: <CategoryIcon />, href: '/settings/channels' },
     { text: '휴지통', icon: <DeleteIcon />, href: '/trash' },
