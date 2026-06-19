@@ -672,9 +672,8 @@ export default function LeadsPage() {
 
   const handleAddLeadClick = useCallback(() => {
     setEditingLeadId(null);
-    setAvailableAssignees(getAvailableAssignees());
     setAddLeadModalOpen(true);
-  }, [getAvailableAssignees]);
+  }, []);
 
   const handleEditLeadClick = useCallback((lead: Lead) => {
     const utmSources = Array.isArray(lead.utm_source)
