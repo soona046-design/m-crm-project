@@ -14,6 +14,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import api from '@/lib/axios';
+import FunnelDropoffTable from '@/components/FunnelDropoffTable';
 
 interface FunnelData {
   stage: string;
@@ -139,6 +140,7 @@ export default function FunnelDashboardPage() {
             leads: 0,
             tickets: 0,
             appointments: 0,
+            contracts: 0,
             cost: 0,
             revenue: 0,
           });
@@ -149,6 +151,7 @@ export default function FunnelDashboardPage() {
         ch.leads += campaign.leads || 0;
         ch.tickets += campaign.tickets || 0;
         ch.appointments += campaign.appointments || 0;
+        ch.contracts += campaign.contracts || 0;
         ch.cost += campaign.cost || 0;
         ch.revenue += campaign.revenue || 0;
       });
@@ -184,25 +187,9 @@ export default function FunnelDashboardPage() {
       const totalLeads = channelData.reduce((sum: number, ch: any) => sum + (ch.leads || 0), 0);
       const totalTickets = channelData.reduce((sum: number, ch: any) => sum + (ch.tickets || 0), 0);
       const totalAppointments = channelData.reduce((sum: number, ch: any) => sum + (ch.appointments || 0), 0);
+      const totalContracts = channelData.reduce((sum: number, ch: any) => sum + (ch.contracts || 0), 0);
       const totalRevenue = channelData.reduce((sum: number, ch: any) => sum + (ch.revenue || 0), 0);
       const totalCost = channelData.reduce((sum: number, ch: any) => sum + (ch.cost || 0), 0);
-
-      // 계약완료 수 계산 (리드 데이터에서 '계약완료' 상태 카운팅)
-      const storedLeads = typeof window !== 'undefined' ? localStorage.getItem('mcrm_leads') : null;
-      let totalContracts = 0;
-
-      if (storedLeads) {
-        const leads = JSON.parse(storedLeads);
-        let filteredLeads = leads;
-
-        if (selectedChannel !== 'all') {
-          filteredLeads = leads.filter((lead: any) => lead.utm_source === selectedChannel);
-        }
-
-        totalContracts = filteredLeads.filter((lead: any) =>
-          lead.status === '계약완료' || lead.status === 'closed'
-        ).length;
-      }
 
       // 전환율 계산
       const clickRate = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
@@ -245,7 +232,7 @@ export default function FunnelDashboardPage() {
           color: colors[1],
         },
         {
-          stage: '전환(문의)',
+          stage: '문의',
           value: totalLeads,
           conversionRate: leadConversionRate,
           color: colors[2],
@@ -606,6 +593,8 @@ export default function FunnelDashboardPage() {
           )}
         </Paper>
       )}
+
+      <FunnelDropoffTable channel={selectedChannel} startDate={startDate} endDate={endDate} />
     </Box>
   );
 }

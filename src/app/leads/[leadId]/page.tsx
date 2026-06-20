@@ -975,14 +975,9 @@ export default function LeadDetailPage() {
                   label="상태"
                 >
                   <MenuItem value="신규">신규</MenuItem>
-                  <MenuItem value="문의중">문의중</MenuItem>
                   <MenuItem value="상담완료">상담완료</MenuItem>
-                  <MenuItem value="contacted">contacted</MenuItem>
-                  <MenuItem value="미팅완료">미팅완료</MenuItem>
                   <MenuItem value="예약완료">예약완료</MenuItem>
-                  <MenuItem value="converted">converted</MenuItem>
                   <MenuItem value="계약완료">계약완료</MenuItem>
-                  <MenuItem value="closed">closed</MenuItem>
                   <MenuItem value="보류">보류</MenuItem>
                   <MenuItem value="거절">거절</MenuItem>
                 </Select>

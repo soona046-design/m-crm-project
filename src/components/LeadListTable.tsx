@@ -42,6 +42,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { getPriorityInfoFromScore } from '@/lib/leadPriority';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
+import { STATUS_KR_TO_EN } from '@/lib/leadStatus';
 
 interface Note {
   id: string;
@@ -250,7 +251,7 @@ export default function LeadListTable({
     switch (status) {
       case '상담완료':
         return 'primary';
-      case '미팅완료':
+      case '예약완료':
         return 'secondary';
       case '계약완료':
         return 'success';
@@ -285,19 +286,10 @@ export default function LeadListTable({
 
   // 상태 변경 핸들러 (페이지 새로고침 없이)
   const handleStatusChange = async (leadId: string, newStatus: string) => {
-    const statusMap: { [key: string]: string } = {
-      '신규': 'new',
-      '상담완료': 'contacted',
-      '미팅완료': 'converted',
-      '계약완료': 'converted',
-      '보류': 'pending',
-      '거절': 'rejected',
-    };
-
     // 1. 백엔드 API 호출 시도
     try {
       await api.put(`/api/leads/${leadId}`, {
-        status: statusMap[newStatus] || 'new',
+        status: STATUS_KR_TO_EN[newStatus] || 'new',
       });
       onRefresh();
       return;
@@ -655,18 +647,18 @@ export default function LeadListTable({
                               borderRadius: '16px',
                               fontSize: '0.8125rem',
                               backgroundColor:
-                                lead.status === '신규' || lead.status === '문의중' ? '#fff3e0' :
-                                lead.status === '상담완료' || lead.status === 'contacted' ? '#e3f2fd' :
-                                lead.status === '미팅완료' || lead.status === '예약완료' || lead.status === 'converted' ? '#f5f5f5' :
-                                lead.status === '계약완료' || lead.status === 'closed' ? '#e8f5e9' :
+                                lead.status === '신규' ? '#fff3e0' :
+                                lead.status === '상담완료' ? '#e3f2fd' :
+                                lead.status === '예약완료' ? '#f5f5f5' :
+                                lead.status === '계약완료' ? '#e8f5e9' :
                                 lead.status === '보류' ? '#fff9c4' :
                                 lead.status === '거절' ? '#ffebee' :
                                 '#fff3e0',
                               color:
-                                lead.status === '신규' || lead.status === '문의중' ? '#f57c00' :
-                                lead.status === '상담완료' || lead.status === 'contacted' ? '#1976d2' :
-                                lead.status === '미팅완료' || lead.status === '예약완료' || lead.status === 'converted' ? '#616161' :
-                                lead.status === '계약완료' || lead.status === 'closed' ? '#388e3c' :
+                                lead.status === '신규' ? '#f57c00' :
+                                lead.status === '상담완료' ? '#1976d2' :
+                                lead.status === '예약완료' ? '#616161' :
+                                lead.status === '계약완료' ? '#388e3c' :
                                 lead.status === '보류' ? '#f9a825' :
                                 lead.status === '거절' ? '#d32f2f' :
                                 '#f57c00',
@@ -676,7 +668,7 @@ export default function LeadListTable({
                         >
                           <MenuItem value="신규">신규</MenuItem>
                           <MenuItem value="상담완료">상담완료</MenuItem>
-                          <MenuItem value="미팅완료">미팅완료</MenuItem>
+                          <MenuItem value="예약완료">예약완료</MenuItem>
                           <MenuItem value="계약완료">계약완료</MenuItem>
                           <MenuItem value="보류">보류</MenuItem>
                           <MenuItem value="거절">거절</MenuItem>

@@ -8,6 +8,7 @@ import axios from 'axios'; // API 호출을 위해 axios import
 import api from '@/lib/axios'; // 채널 관리 API 호출용
 import { useAuth } from '@/contexts/AuthContext';
 import { getPriorityInfoFromScore } from '@/lib/leadPriority';
+import { STATUS_EN_TO_KR, STATUS_KR_TO_EN, LEAD_STATUS_OPTIONS_KR } from '@/lib/leadStatus';
 
 interface Lead {
   lead_id: string; // 백엔드 모델에 맞게 id 대신 lead_id 사용
@@ -147,7 +148,9 @@ export default function LeadsPage() {
             page: page + 1, // Laravel은 1-based pagination
             per_page: rowsPerPage,
             search: searchTerm || undefined,
-            status: appliedFilters.status.length > 0 ? appliedFilters.status.join(',') : undefined,
+            status: appliedFilters.status.length > 0
+              ? appliedFilters.status.map(s => STATUS_KR_TO_EN[s] || s).join(',')
+              : undefined,
             channel: appliedFilters.channel.length > 0 ? appliedFilters.channel.join(',') : undefined,
             assignee: appliedFilters.assignee.length > 0 ? appliedFilters.assignee.join(',') : undefined,
             sla_status: appliedFilters.slaStatus.length > 0 ? appliedFilters.slaStatus.join(',') : undefined,
@@ -162,7 +165,11 @@ export default function LeadsPage() {
 
         // API 성공 시
         if (response.data && response.data.data) {
-          allLeads = response.data.data;
+          // 백엔드는 영문 enum을 그대로 반환 → 화면 표시용 한글로 변환
+          allLeads = response.data.data.map((lead: Lead) => ({
+            ...lead,
+            status: STATUS_EN_TO_KR[lead.status] || lead.status,
+          }));
           setTotalLeads(response.data.total || allLeads.length);
           setLeads(allLeads);
           setLoading(false);
@@ -192,7 +199,7 @@ export default function LeadsPage() {
           lead_id: 'lead_002',
           name: '이환자',
           primary_phone: '010-5678-****',
-          status: '미팅완료',
+          status: '예약완료',
           utm_source: 'Facebook Ads',
           last_contact_at: '2025-09-29T11:00:00Z',
           score: 78,
@@ -228,7 +235,7 @@ export default function LeadsPage() {
           lead_id: 'lead_005',
           name: '정환자',
           primary_phone: '010-7890-****',
-          status: '미팅완료',
+          status: '예약완료',
           utm_source: 'YouTube',
           last_contact_at: '2025-09-29T13:30:00Z',
           score: 72,
@@ -252,7 +259,7 @@ export default function LeadsPage() {
           lead_id: 'lead_007',
           name: '조환자',
           primary_phone: '010-1357-****',
-          status: '미팅완료',
+          status: '예약완료',
           utm_source: 'Facebook Ads',
           last_contact_at: '2025-09-29T08:45:00Z',
           score: 83,
@@ -288,7 +295,7 @@ export default function LeadsPage() {
           lead_id: 'lead_010',
           name: '한환자',
           primary_phone: '010-1470-****',
-          status: '미팅완료',
+          status: '예약완료',
           utm_source: 'YouTube',
           last_contact_at: '2025-09-29T15:25:00Z',
           score: 89,
@@ -730,19 +737,10 @@ export default function LeadsPage() {
     try {
       setLoading(true);
 
-      const statusMap: { [key: string]: string } = {
-        '신규': 'new',
-        '상담완료': 'contacted',
-        '미팅완료': 'converted',
-        '계약완료': 'converted',
-        '보류': 'pending',
-        '거절': 'rejected',
-      };
-
       const payload = {
         name: newLead.name,
         primary_phone: newLead.primary_phone,
-        status: statusMap[newLead.status] || 'new',
+        status: STATUS_KR_TO_EN[newLead.status] || 'new',
         score: newLead.score,
         memo: newLead.consultation_notes || undefined,
         assigned_user_id: newLead.assigned_user_id || undefined,
@@ -925,7 +923,7 @@ export default function LeadsPage() {
               >
                 <MenuItem value="신규">신규</MenuItem>
                 <MenuItem value="상담완료">상담완료</MenuItem>
-                <MenuItem value="미팅완료">미팅완료</MenuItem>
+                <MenuItem value="예약완료">예약완료</MenuItem>
                 <MenuItem value="계약완료">계약완료</MenuItem>
                 <MenuItem value="보류">보류</MenuItem>
                 <MenuItem value="거절">거절</MenuItem>
@@ -1029,7 +1027,7 @@ export default function LeadsPage() {
         open={filterDrawerOpen}
         onClose={() => setFilterDrawerOpen(false)}
         onApplyFilters={handleApplyFilters}
-        availableStatuses={['문의중', '상담완료', '미팅완료', '계약완료', '보류']}
+        availableStatuses={LEAD_STATUS_OPTIONS_KR}
         availableChannels={availableChannels}
         availableAssignees={availableAssignees}
       />
