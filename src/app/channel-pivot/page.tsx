@@ -170,6 +170,7 @@ interface CampaignData {
   source?: 'api' | 'manual'; // API 데이터 vs 수동 입력 데이터
   startDate?: string; // 캠페인 시작일 (YYYY-MM-DD)
   endDate?: string; // 캠페인 종료일 (YYYY-MM-DD)
+  deletedAt?: string; // 삭제일시 (ISO 8601)
 }
 
 interface SummaryMetrics {
@@ -493,6 +494,7 @@ export default function ChannelPivotDashboardPage() {
         roi: campaign.roi,
         roas: campaign.roas,
         source: campaign.source, // source 필드 전달
+        deletedAt: campaign.deletedAt,
       });
 
       // 주차 집계
@@ -1063,9 +1065,24 @@ export default function ChannelPivotDashboardPage() {
 
         setPivotTableData(combinedData);
 
-        // 백엔드에서 channelPerformance가 없으면 수동으로 계산
+        // 백엔드에서 channelPerformance가 없으면 채널별 집계도 수동으로 계산
         if (!response.data.channelPerformance || response.data.channelPerformance.length === 0) {
           recalculateChannelData(combinedData);
+        } else {
+          // 채널별 집계 자체는 백엔드 응답을 그대로 쓰지만, 상단 요약 카드(총 광고비/총 수익/평균 ROI/평균 전환율)는
+          // 백엔드가 별도 필드로 내려주지 않으므로 캠페인 합계로 직접 계산해서 채워준다.
+          const totalCost = combinedData.reduce((sum, c) => sum + (c.cost || 0), 0);
+          const totalRevenue = combinedData.reduce((sum, c) => sum + (c.revenue || 0), 0);
+          const totalLeads = combinedData.reduce((sum, c) => sum + (c.leads || 0), 0);
+          const totalAppointments = combinedData.reduce((sum, c) => sum + (c.appointments || 0), 0);
+          setSummaryMetrics({
+            totalCost,
+            totalRevenue,
+            totalLeads,
+            totalAppointments,
+            averageROI: calculateROI(totalRevenue, totalCost),
+            averageConversionRate: calculateConversionRate(totalAppointments, totalLeads),
+          });
         }
 
         setMonthlyData(groupByMonth(combinedData));
@@ -1277,8 +1294,7 @@ export default function ChannelPivotDashboardPage() {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="대시보드" />
-          <Tab label="상세 성과 1" />
-          <Tab label="상세 성과 2" />
+          <Tab label="상세 성과" />
         </Tabs>
       </Paper>
 
@@ -1769,10 +1785,23 @@ export default function ChannelPivotDashboardPage() {
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => setAddCampaignDialogOpen(true)}
+                    onClick={() => {
+                      fetchChannelManagementData(); // 채널 관리 활성화 채널 목록 최신화
+                      setAddCampaignDialogOpen(true);
+                    }}
                     size="small"
                   >
                     캠페인 추가
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleBulkDelete}
+                    size="small"
+                    disabled={selectedCampaigns.size === 0}
+                  >
+                    일괄삭제 ({selectedCampaigns.size})
                   </Button>
                 </Box>
               </Box>
@@ -1782,10 +1811,19 @@ export default function ChannelPivotDashboardPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell width={50}></TableCell>
+                        <TableCell width={50} padding="checkbox">
+                          <Checkbox
+                            checked={selectedCampaigns.size > 0 && selectedCampaigns.size === monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
+                            indeterminate={selectedCampaigns.size > 0 && selectedCampaigns.size < monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
+                            onChange={toggleAllCampaigns}
+                          />
+                        </TableCell>
                         <TableCell><strong>기간</strong></TableCell>
                         <TableCell><strong>채널명</strong></TableCell>
                         <TableCell align="right"><strong>노출</strong></TableCell>
                         <TableCell align="right"><strong>클릭</strong></TableCell>
+                        <TableCell align="right"><strong>클릭율(CTR)</strong></TableCell>
+                        <TableCell align="right"><strong>클릭당비용(CPC)</strong></TableCell>
                         <TableCell align="right"><strong>문의</strong></TableCell>
                         <TableCell align="right"><strong>예약</strong></TableCell>
                         <TableCell align="right"><strong>총비용</strong></TableCell>
@@ -1796,7 +1834,9 @@ export default function ChannelPivotDashboardPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {monthlyData.map((monthRow) => (
+                      {monthlyData.map((monthRow) => {
+                        const monthCTR = monthRow.totalImpressions > 0 ? (monthRow.totalClicks / monthRow.totalImpressions * 100) : 0;
+                        return (
                         <React.Fragment key={monthRow.yearMonth}>
                           {/* Level 1: 월별 행 */}
                           <TableRow
@@ -1817,6 +1857,7 @@ export default function ChannelPivotDashboardPage() {
                                 )}
                               </IconButton>
                             </TableCell>
+                            <TableCell></TableCell>
                             <TableCell>
                               <Typography variant="body1" sx={{ fontWeight: 700 }}>
                                 {monthRow.yearMonth}
@@ -1825,6 +1866,8 @@ export default function ChannelPivotDashboardPage() {
                             <TableCell></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalImpressions)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalClicks)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatPercentage(monthCTR)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatCurrency(monthRow.avgCpc)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalLeads)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatNumber(monthRow.totalAppointments)}</strong></TableCell>
                             <TableCell align="right"><strong>{formatCurrency(monthRow.totalCost)}</strong></TableCell>
@@ -1837,6 +1880,7 @@ export default function ChannelPivotDashboardPage() {
                           {/* Level 2: 주별 행 */}
                           {expandedMonths.has(monthRow.yearMonth) && monthRow.weeks.map((weekRow) => {
                             const weekKey = `${monthRow.yearMonth}_W${weekRow.weekNumber}`;
+                            const weekCTR = weekRow.totalImpressions > 0 ? (weekRow.totalClicks / weekRow.totalImpressions * 100) : 0;
                             return (
                               <React.Fragment key={weekKey}>
                                 <TableRow
@@ -1857,6 +1901,7 @@ export default function ChannelPivotDashboardPage() {
                                       )}
                                     </IconButton>
                                   </TableCell>
+                                  <TableCell></TableCell>
                                   <TableCell sx={{ pl: 4 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {weekRow.weekLabel} ({weekRow.dateRange})
@@ -1865,6 +1910,8 @@ export default function ChannelPivotDashboardPage() {
                                   <TableCell></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalImpressions)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalClicks)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatPercentage(weekCTR)}</strong></TableCell>
+                                  <TableCell align="right"><strong>{formatCurrency(weekRow.avgCpc)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalLeads)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatNumber(weekRow.totalAppointments)}</strong></TableCell>
                                   <TableCell align="right"><strong>{formatCurrency(weekRow.totalCost)}</strong></TableCell>
@@ -1875,13 +1922,24 @@ export default function ChannelPivotDashboardPage() {
                                 </TableRow>
 
                                 {/* Level 3: 캠페인별 행 */}
-                                {expandedWeeks.has(weekKey) && weekRow.campaigns.map((campaign) => {
+                                {expandedWeeks.has(weekKey) && weekRow.campaigns
+                                  .filter(campaign => !campaign.deletedAt) // 삭제된(휴지통) 캠페인 제외
+                                  .map((campaign) => {
                                   const isEditable = campaign.source === 'manual';
                                   const isApiData = campaign.source === 'api';
 
                                   return (
                                     <TableRow key={campaign.id} hover sx={{ backgroundColor: '#fafafa' }}>
                                       <TableCell></TableCell>
+                                      <TableCell padding="checkbox">
+                                        <Checkbox
+                                          checked={selectedCampaigns.has(campaign.id)}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            toggleCampaignSelection(campaign.id);
+                                          }}
+                                        />
+                                      </TableCell>
                                       <TableCell></TableCell>
                                       <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1969,6 +2027,10 @@ export default function ChannelPivotDashboardPage() {
                                           formatNumber(campaign.clicks)
                                         )}
                                       </TableCell>
+
+                                      {/* CTR/CPC - 계산 값 (읽기 전용) */}
+                                      <TableCell align="right">{formatPercentage(campaign.ctr)}</TableCell>
+                                      <TableCell align="right">{formatCurrency(campaign.cpc)}</TableCell>
 
                                       {/* 문의 - 편집 가능 */}
                                       <TableCell
@@ -2155,209 +2217,6 @@ export default function ChannelPivotDashboardPage() {
                                           </IconButton>
                                         )}
                                       </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-                        </React.Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography variant="body1" color="text.secondary">월별 데이터가 없습니다.</Typography>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* 탭 2: 상세 성과 (복제) */}
-      {!loading && !error && currentTab === 2 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">기간별 상세 성과 (뷰 2)</Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<DownloadIcon />}
-                    onClick={handleDownloadTemplate}
-                    size="small"
-                  >
-                    템플릿 다운로드
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadFileIcon />}
-                    size="small"
-                  >
-                    엑셀 업로드
-                    <input
-                      type="file"
-                      hidden
-                      accept=".xlsx,.xls"
-                      onChange={handleExcelUpload}
-                    />
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setAddCampaignDialogOpen(true)}
-                    size="small"
-                  >
-                    캠페인 추가
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={handleBulkDelete}
-                    size="small"
-                    disabled={selectedCampaigns.size === 0}
-                  >
-                    일괄삭제 ({selectedCampaigns.size})
-                  </Button>
-                </Box>
-              </Box>
-              {monthlyData.length > 0 ? (
-                <TableContainer sx={{ maxHeight: 600 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell width={50}></TableCell>
-                        <TableCell width={50} padding="checkbox">
-                          <Checkbox
-                            checked={selectedCampaigns.size > 0 && selectedCampaigns.size === monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
-                            indeterminate={selectedCampaigns.size > 0 && selectedCampaigns.size < monthlyData.flatMap(m => m.weeks.flatMap(w => w.campaigns.filter(c => !c.deletedAt))).length}
-                            onChange={toggleAllCampaigns}
-                          />
-                        </TableCell>
-                        <TableCell><strong>기간</strong></TableCell>
-                        <TableCell><strong>채널</strong></TableCell>
-                        <TableCell align="right"><strong>노출</strong></TableCell>
-                        <TableCell align="right"><strong>클릭</strong></TableCell>
-                        <TableCell align="right"><strong>클릭당비용(원)</strong></TableCell>
-                        <TableCell align="right"><strong>비용(원)</strong></TableCell>
-                        <TableCell align="right"><strong>클릭율(%)</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {monthlyData.map((monthRow) => {
-                        const monthCPC = monthRow.totalClicks > 0 ? monthRow.totalCost / monthRow.totalClicks : 0;
-                        const monthCTR = monthRow.totalImpressions > 0 ? (monthRow.totalClicks / monthRow.totalImpressions * 100) : 0;
-                        return (
-                        <React.Fragment key={`tab2-${monthRow.yearMonth}`}>
-                          <TableRow
-                            hover
-                            sx={{
-                              backgroundColor: '#e3f2fd',
-                              cursor: 'pointer',
-                              '&:hover': { backgroundColor: '#bbdefb' }
-                            }}
-                            onClick={() => toggleMonth(monthRow.yearMonth)}
-                          >
-                            <TableCell>
-                              <IconButton size="small">
-                                {expandedMonths.has(monthRow.yearMonth) ? (
-                                  <KeyboardArrowDownIcon fontSize="small" />
-                                ) : (
-                                  <KeyboardArrowRightIcon fontSize="small" />
-                                )}
-                              </IconButton>
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>
-                              <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                                {monthRow.yearMonth}
-                              </Typography>
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell align="right"><strong>{formatNumber(monthRow.totalImpressions)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatNumber(monthRow.totalClicks)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatCurrency(monthCPC)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatCurrency(monthRow.totalCost)}</strong></TableCell>
-                            <TableCell align="right"><strong>{monthCTR.toFixed(2)}%</strong></TableCell>
-                          </TableRow>
-
-                          {expandedMonths.has(monthRow.yearMonth) && monthRow.weeks.map((weekRow) => {
-                            const weekKey = `${monthRow.yearMonth}_W${weekRow.weekNumber}`;
-                            const weekCPC = weekRow.totalClicks > 0 ? weekRow.totalCost / weekRow.totalClicks : 0;
-                            const weekCTR = weekRow.totalImpressions > 0 ? (weekRow.totalClicks / weekRow.totalImpressions * 100) : 0;
-                            return (
-                              <React.Fragment key={`tab2-${weekKey}`}>
-                                <TableRow
-                                  hover
-                                  sx={{
-                                    backgroundColor: '#f5f5f5',
-                                    cursor: 'pointer',
-                                    '&:hover': { backgroundColor: '#eeeeee' }
-                                  }}
-                                  onClick={() => toggleWeek(weekKey)}
-                                >
-                                  <TableCell>
-                                    <IconButton size="small" sx={{ ml: 2 }}>
-                                      {expandedWeeks.has(weekKey) ? (
-                                        <KeyboardArrowDownIcon fontSize="small" />
-                                      ) : (
-                                        <KeyboardArrowRightIcon fontSize="small" />
-                                      )}
-                                    </IconButton>
-                                  </TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell sx={{ pl: 4 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                      {weekRow.weekLabel} ({weekRow.dateRange})
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalImpressions)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{formatNumber(weekRow.totalClicks)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{formatCurrency(weekCPC)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{formatCurrency(weekRow.totalCost)}</strong></TableCell>
-                                  <TableCell align="right"><strong>{weekCTR.toFixed(2)}%</strong></TableCell>
-                                </TableRow>
-
-                                {expandedWeeks.has(weekKey) && weekRow.campaigns
-                                  .filter(campaign => !campaign.deletedAt) // 삭제된 캠페인 제외
-                                  .map((campaign) => {
-                                  const isEditable = campaign.source === 'manual';
-                                  const isApiData = campaign.source === 'api';
-                                  const campaignCPC = campaign.clicks > 0 ? campaign.cost / campaign.clicks : 0;
-                                  const campaignCTR = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions * 100) : 0;
-
-                                  return (
-                                    <TableRow key={`tab2-${campaign.id}`} hover sx={{ backgroundColor: '#fafafa' }}>
-                                      <TableCell></TableCell>
-                                      <TableCell padding="checkbox">
-                                        <Checkbox
-                                          checked={selectedCampaigns.has(campaign.id)}
-                                          onChange={(e) => {
-                                            e.stopPropagation();
-                                            toggleCampaignSelection(campaign.id);
-                                          }}
-                                        />
-                                      </TableCell>
-                                      <TableCell></TableCell>
-                                      <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                          <Typography variant="body2" sx={{ color: '#666' }}>
-                                            {campaign.channel} - {campaign.campaign}
-                                          </Typography>
-                                          {isApiData && (
-                                            <LockIcon sx={{ fontSize: 14, color: '#999' }} titleAccess="API 데이터 (읽기 전용)" />
-                                          )}
-                                        </Box>
-                                      </TableCell>
-                                      <TableCell align="right">{formatNumber(campaign.impressions)}</TableCell>
-                                      <TableCell align="right">{formatNumber(campaign.clicks)}</TableCell>
-                                      <TableCell align="right">{formatCurrency(campaignCPC)}</TableCell>
-                                      <TableCell align="right">{formatCurrency(campaign.cost)}</TableCell>
-                                      <TableCell align="right">{campaignCTR.toFixed(2)}%</TableCell>
                                     </TableRow>
                                   );
                                 })}
