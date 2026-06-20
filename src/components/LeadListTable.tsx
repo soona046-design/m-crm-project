@@ -85,6 +85,7 @@ interface LeadListTableProps {
   onAddLeadClick: () => void;
   onLeadUpdate?: (leadId: string, updates: Partial<Lead>) => void; // 특정 리드 로컬 상태 업데이트
   onEditLead?: (lead: Lead) => void; // 수정 모달 열기
+  availableChannels?: string[]; // 채널관리(/settings/channels)에서 활성화된 채널 목록
 }
 
 export default function LeadListTable({
@@ -101,6 +102,7 @@ export default function LeadListTable({
   onAddLeadClick,
   onLeadUpdate,
   onEditLead,
+  availableChannels = [],
 }: LeadListTableProps) {
   const router = useRouter();
   const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
@@ -128,18 +130,6 @@ export default function LeadListTable({
     '박상담',
     '최상담',
     '정매니저'
-  ];
-
-  // 사용 가능한 채널 목록
-  const availableChannels = [
-    'Google Ads',
-    'Facebook Ads',
-    'Naver Ads',
-    'Instagram',
-    'YouTube',
-    '카카오',
-    '네이버블로그',
-    '기타'
   ];
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {

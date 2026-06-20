@@ -882,6 +882,7 @@ export default function LeadsPage() {
         onAddLeadClick={handleAddLeadClick}
         onLeadUpdate={handleLeadUpdate}
         onEditLead={handleEditLeadClick}
+        availableChannels={availableChannels}
       />
 
       {/* 새 문의 등록 모달 */}
