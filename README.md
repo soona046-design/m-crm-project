@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+<!-- test: Vercel Git 연동 자동배포 확인용 (제거 가능) -->
+
 ## Getting Started
 
 First, run the development server:
