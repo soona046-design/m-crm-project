@@ -1069,12 +1069,14 @@ export default function ChannelPivotDashboardPage() {
         if (!response.data.channelPerformance || response.data.channelPerformance.length === 0) {
           recalculateChannelData(combinedData);
         } else {
-          // 채널별 집계 자체는 백엔드 응답을 그대로 쓰지만, 상단 요약 카드(총 광고비/총 수익/평균 ROI/평균 전환율)는
-          // 백엔드가 별도 필드로 내려주지 않으므로 캠페인 합계로 직접 계산해서 채워준다.
-          const totalCost = combinedData.reduce((sum, c) => sum + (c.cost || 0), 0);
-          const totalRevenue = combinedData.reduce((sum, c) => sum + (c.revenue || 0), 0);
-          const totalLeads = combinedData.reduce((sum, c) => sum + (c.leads || 0), 0);
-          const totalAppointments = combinedData.reduce((sum, c) => sum + (c.appointments || 0), 0);
+          // 상단 요약 카드(총 광고비/총 수익/평균 ROI/평균 전환율)는 channelPerformance(채널별 집계)에서 직접 합산한다.
+          // 캠페인 단위 pivotTable(combinedData)에서 합산하면 0이 나옴: 백엔드가 캠페인별 비용을 utm_campaign
+          // 기준으로 추가 필터링하는데(NaverAdsApiService가 저장하는 실제 캠페인명과 utm_campaign 값이 달라서
+          // 거의 매칭이 안 됨), channelPerformance는 채널(플랫폼) 단위로만 매칭해서 비용이 정상 집계되어 있음.
+          const totalCost = response.data.channelPerformance.reduce((sum: number, c: ChannelPerformanceData) => sum + (c.cost || 0), 0);
+          const totalRevenue = response.data.channelPerformance.reduce((sum: number, c: ChannelPerformanceData) => sum + (c.revenue || 0), 0);
+          const totalLeads = response.data.channelPerformance.reduce((sum: number, c: ChannelPerformanceData) => sum + (c.leads || 0), 0);
+          const totalAppointments = response.data.channelPerformance.reduce((sum: number, c: ChannelPerformanceData) => sum + (c.appointments || 0), 0);
           setSummaryMetrics({
             totalCost,
             totalRevenue,
