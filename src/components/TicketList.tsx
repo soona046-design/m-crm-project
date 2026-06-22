@@ -3,10 +3,11 @@
 import React from 'react';
 import { Box, Typography, Paper, Chip, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
-import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
-import WarningIcon from '@mui/icons-material/Warning';
-import ErrorIcon from '@mui/icons-material/Error';
-import { styled, alpha } from '@mui/material/styles';
+// [SLA 기능 비활성화 2026-06-22]
+// import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
+// import WarningIcon from '@mui/icons-material/Warning';
+// import ErrorIcon from '@mui/icons-material/Error';
+// import { styled, alpha } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';
 import { ListItemButton } from '@mui/material';
 
@@ -17,15 +18,16 @@ interface TicketListProps {
   onTicketSelect?: (ticketId: string) => void; // 티켓 클릭 시 상세 보기 등의 액션
 }
 
-const SLABanner = styled(Box)<{ slaStatus: 'normal' | 'warning' | 'violated' }>(({ theme, slaStatus }) => ({
-  padding: theme.spacing(1),
-  textAlign: 'center',
-  color: theme.palette.common.white,
-  fontWeight: 'bold',
-  backgroundColor: slaStatus === 'warning'
-    ? alpha(theme.palette.warning.main, 0.8) // 노란색
-    : alpha(theme.palette.error.main, 0.8), // 빨간색
-}));
+// [SLA 기능 비활성화 2026-06-22]
+// const SLABanner = styled(Box)<{ slaStatus: 'normal' | 'warning' | 'violated' }>(({ theme, slaStatus }) => ({
+//   padding: theme.spacing(1),
+//   textAlign: 'center',
+//   color: theme.palette.common.white,
+//   fontWeight: 'bold',
+//   backgroundColor: slaStatus === 'warning'
+//     ? alpha(theme.palette.warning.main, 0.8) // 노란색
+//     : alpha(theme.palette.error.main, 0.8), // 빨간색
+// }));
 
 export default function TicketList({ tickets, onTicketSelect }: TicketListProps) {
   const theme = useTheme();
@@ -39,16 +41,17 @@ export default function TicketList({ tickets, onTicketSelect }: TicketListProps)
     }
   };
 
-  const formatSLADueAt = (slaDueAt?: string) => {
-    if (!slaDueAt) return 'N/A';
-    const now = new Date();
-    const due = new Date(slaDueAt);
-    const diffMinutes = Math.round((due.getTime() - now.getTime()) / (1000 * 60));
-
-    if (diffMinutes <= 0) return 'SLA 초과';
-    if (diffMinutes <= 10) return `${diffMinutes}분 남음`;
-    return `만료 예정: ${new Date(slaDueAt).toLocaleTimeString()}`;
-  };
+  // [SLA 기능 비활성화 2026-06-22]
+  // const formatSLADueAt = (slaDueAt?: string) => {
+  //   if (!slaDueAt) return 'N/A';
+  //   const now = new Date();
+  //   const due = new Date(slaDueAt);
+  //   const diffMinutes = Math.round((due.getTime() - now.getTime()) / (1000 * 60));
+  //
+  //   if (diffMinutes <= 0) return 'SLA 초과';
+  //   if (diffMinutes <= 10) return `${diffMinutes}분 남음`;
+  //   return `만료 예정: ${new Date(slaDueAt).toLocaleTimeString()}`;
+  // };
 
   return (
     <List disablePadding>
@@ -59,16 +62,18 @@ export default function TicketList({ tickets, onTicketSelect }: TicketListProps)
       ) : (
         tickets.map((ticket) => (
           <Paper key={ticket.ticket_id} sx={{ mb: 2, overflow: 'hidden' }}>
+            {/* [SLA 기능 비활성화 2026-06-22]
             {ticket.sla_timer && (ticket.sla_timer.status === 'warning' || ticket.sla_timer.status === 'violated') && (
               <SLABanner slaStatus={ticket.sla_timer.status}>
-                {ticket.sla_timer.status === 'warning' && <WarningIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />} 
-                {ticket.sla_timer.status === 'violated' && <ErrorIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />} 
+                {ticket.sla_timer.status === 'warning' && <WarningIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />}
+                {ticket.sla_timer.status === 'violated' && <ErrorIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />}
                 {ticket.sla_timer.status === 'warning' ? 'SLA 임박' : 'SLA 위반'}
                 <Typography variant="caption" sx={{ ml: 1 }}>
                   {ticket.sla_timer.formatted}
                 </Typography>
               </SLABanner>
             )}
+            */}
             <ListItemButton onClick={() => onTicketSelect && onTicketSelect(ticket.ticket_id)}>
               <ListItemText
                 primary={ticket.title}
@@ -89,6 +94,7 @@ export default function TicketList({ tickets, onTicketSelect }: TicketListProps)
                         size="small"
                         sx={{ mr: 1 }}
                       />
+                      {/* [SLA 기능 비활성화 2026-06-22]
                       {ticket.sla_timer && (
                         <Chip
                           icon={<AccessAlarmIcon fontSize="small" />}
@@ -97,6 +103,7 @@ export default function TicketList({ tickets, onTicketSelect }: TicketListProps)
                           size="small"
                         />
                       )}
+                      */}
                       <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                         {new Date(ticket.created_at).toLocaleString()}
                       </Typography>

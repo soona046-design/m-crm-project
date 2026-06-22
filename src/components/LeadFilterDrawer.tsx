@@ -225,7 +225,7 @@ export default function LeadFilterDrawer({
             </Select>
           </FormControl>
 
-          {/* SLA 상태 필터 */}
+          {/* [SLA 기능 비활성화 2026-06-22] SLA 상태 필터
           <FormControl fullWidth size="small">
             <InputLabel>SLA 상태</InputLabel>
             <Select
@@ -246,6 +246,7 @@ export default function LeadFilterDrawer({
               <MenuItem value="위반">위반</MenuItem>
             </Select>
           </FormControl>
+          */}
 
           {/* 우선순위 점수 범위 */}
           <Box>

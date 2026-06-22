@@ -1,14 +1,13 @@
-import { MessageSquare, Users, AlertCircle, UserCheck } from "lucide-react"
+import { MessageSquare, Users, UserCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 interface StatsCardsProps {
   totalLeads: number;
   activeTickets: number;
-  urgentTickets: number;
   totalUsers: number;
 }
 
-export function StatsCards({ totalLeads, activeTickets, urgentTickets, totalUsers }: StatsCardsProps) {
+export function StatsCards({ totalLeads, activeTickets, totalUsers }: StatsCardsProps) {
   const stats = [
     {
       title: "전체 문의",
@@ -26,14 +25,15 @@ export function StatsCards({ totalLeads, activeTickets, urgentTickets, totalUser
       color: "text-chart-2",
       bgColor: "bg-chart-2/10",
     },
-    {
-      title: "긴급 상담",
-      value: urgentTickets.toString(),
-      subtitle: "긴급/SLA 임박",
-      icon: AlertCircle,
-      color: "text-destructive",
-      bgColor: "bg-destructive/10",
-    },
+    // [SLA 기능 비활성화 2026-06-22] "긴급 상담"(SLA 임박/위반 기반) 카드 제거
+    // {
+    //   title: "긴급 상담",
+    //   value: urgentTickets.toString(),
+    //   subtitle: "긴급 문의",
+    //   icon: AlertCircle,
+    //   color: "text-destructive",
+    //   bgColor: "bg-destructive/10",
+    // },
     {
       title: "전체 사용자",
       value: totalUsers.toString(),

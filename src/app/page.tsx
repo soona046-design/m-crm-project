@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCards } from '@/components/StatsCards';
 import { RecentInquiries } from '@/components/RecentInquiries';
-import { UrgentConsultations } from '@/components/UrgentConsultations';
+// [SLA 기능 비활성화 2026-06-22] import { UrgentConsultations } from '@/components/UrgentConsultations';
 import { InquiryDistribution } from '@/components/InquiryDistribution';
 import { UserStatus } from '@/components/UserStatus';
 
@@ -17,7 +17,7 @@ interface Lead {
   last_contact_at: string;
   score: number;
   assignee_name: string;
-  sla_status: string;
+  sla_status: string; // 타입 전용 — RecentInquiries/InquiryDistribution이 구조적으로 요구. 실제 표시는 안 함
 }
 
 interface Ticket {
@@ -29,11 +29,12 @@ interface Ticket {
   state: string;
   assignee_name: string;
   created_at: string;
-  sla_timer?: {
-    remaining: number;
-    formatted: string;
-    status: string;
-  };
+  // [SLA 기능 비활성화 2026-06-22]
+  // sla_timer?: {
+  //   remaining: number;
+  //   formatted: string;
+  //   status: string;
+  // };
 }
 
 interface User {
@@ -85,26 +86,28 @@ export default function HomePage() {
             assignee_name: '김상담',
             state: '진행',
             created_at: '2025-09-29T08:00:00Z',
-            sla_timer: {
-              remaining: 120,
-              formatted: '2시간 남음',
-              status: 'normal'
-            }
+            // [SLA 기능 비활성화 2026-06-22]
+            // sla_timer: {
+            //   remaining: 120,
+            //   formatted: '2시간 남음',
+            //   status: 'normal'
+            // }
           },
           {
             ticket_id: 'ticket_002',
             lead_id: 'lead_002',
             lead_name: '이환자',
-            title: 'SLA 임박 - 교정 문의',
+            title: '교정 문의',
             priority: '긴급',
             assignee_name: '이상담',
             state: '진행',
             created_at: '2025-09-29T10:00:00Z',
-            sla_timer: {
-              remaining: 30,
-              formatted: '30분 남음',
-              status: 'warning'
-            }
+            // [SLA 기능 비활성화 2026-06-22]
+            // sla_timer: {
+            //   remaining: 30,
+            //   formatted: '30분 남음',
+            //   status: 'warning'
+            // }
           },
           {
             ticket_id: 'ticket_003',
@@ -150,13 +153,12 @@ export default function HomePage() {
       <StatsCards
         totalLeads={dashboardData.leads.length}
         activeTickets={dashboardData.tickets.filter(t => t.state !== '완료').length}
-        urgentTickets={dashboardData.tickets.filter(t => t.sla_timer?.status === 'warning').length}
         totalUsers={dashboardData.users.length}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <RecentInquiries leads={dashboardData.leads} />
-        <UrgentConsultations tickets={dashboardData.tickets} />
+        {/* [SLA 기능 비활성화 2026-06-22] <UrgentConsultations tickets={dashboardData.tickets} /> */}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

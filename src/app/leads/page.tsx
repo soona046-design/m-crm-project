@@ -154,7 +154,7 @@ export default function LeadsPage() {
               : undefined,
             channel: appliedFilters.channel.length > 0 ? appliedFilters.channel.join(',') : undefined,
             assignee: appliedFilters.assignee.length > 0 ? appliedFilters.assignee.join(',') : undefined,
-            sla_status: appliedFilters.slaStatus.length > 0 ? appliedFilters.slaStatus.join(',') : undefined,
+            // [SLA 기능 비활성화 2026-06-22] sla_status: appliedFilters.slaStatus.length > 0 ? appliedFilters.slaStatus.join(',') : undefined,
             score_min: appliedFilters.scoreRange[0] !== 0 ? appliedFilters.scoreRange[0] : undefined,
             score_max: appliedFilters.scoreRange[1] !== 100 ? appliedFilters.scoreRange[1] : undefined,
             date_from: appliedFilters.dateRange.start || undefined,
@@ -376,9 +376,10 @@ export default function LeadsPage() {
       if (appliedFilters.assignee.length > 0) {
         filteredLeads = filteredLeads.filter(lead => appliedFilters.assignee.includes(lead.assignee_name));
       }
-      if (appliedFilters.slaStatus.length > 0) {
-        filteredLeads = filteredLeads.filter(lead => appliedFilters.slaStatus.includes(lead.sla_status));
-      }
+      // [SLA 기능 비활성화 2026-06-22]
+      // if (appliedFilters.slaStatus.length > 0) {
+      //   filteredLeads = filteredLeads.filter(lead => appliedFilters.slaStatus.includes(lead.sla_status));
+      // }
       if (appliedFilters.scoreRange[0] !== 0 || appliedFilters.scoreRange[1] !== 100) {
         filteredLeads = filteredLeads.filter(lead =>
           lead.score >= appliedFilters.scoreRange[0] && lead.score <= appliedFilters.scoreRange[1]
@@ -501,7 +502,7 @@ export default function LeadsPage() {
         '우선순위',
         'C.C',
         '담당자',
-        'SLA상태'
+        // [SLA 기능 비활성화 2026-06-22] 'SLA상태'
       ];
 
       // CSV 데이터 행 생성
@@ -520,7 +521,7 @@ export default function LeadsPage() {
           priorityInfo.priority,
           lead.communication_count.toString(),
           lead.assignee_name,
-          lead.sla_status
+          // [SLA 기능 비활성화 2026-06-22] lead.sla_status
         ].map(field => `"${field}"`).join(',');
       });
 

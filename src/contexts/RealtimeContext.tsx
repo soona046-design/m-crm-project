@@ -33,15 +33,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       setUnreadNotifications((prev) => prev + 1);
     });
 
-    // SLA 경고 수신
-    privateChannel.listen('.sla.warning', (e: any) => {
-      setTicketUpdates((prev) => [...prev, { type: 'warning', ...e }]);
-    });
-
-    // SLA 위반 수신
-    privateChannel.listen('.sla.violated', (e: any) => {
-      setTicketUpdates((prev) => [...prev, { type: 'violated', ...e }]);
-    });
+    // [SLA 기능 비활성화 2026-06-22]
+    // privateChannel.listen('.sla.warning', (e: any) => {
+    //   setTicketUpdates((prev) => [...prev, { type: 'warning', ...e }]);
+    // });
+    // privateChannel.listen('.sla.violated', (e: any) => {
+    //   setTicketUpdates((prev) => [...prev, { type: 'violated', ...e }]);
+    // });
 
     // 티켓 업데이트 수신
     privateChannel.listen('.ticket.updated', (e: any) => {

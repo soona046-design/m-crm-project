@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, Card, CardContent, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Alert, Snackbar } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+// [SLA 기능 비활성화 2026-06-22] import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import DashboardFilters from '@/components/DashboardFilters';
 import api from '@/lib/axios';
@@ -16,7 +16,7 @@ interface AgentPerformanceData {
   total_tickets?: number;
   average_response_time?: number; // 분 단위
   clinic_visit_conversion_rate?: number; // % 단위
-  sla_violation_rate?: number; // % 단위
+  // [SLA 기능 비활성화 2026-06-22] sla_violation_rate?: number; // % 단위
   total_appointments?: number;
   total_clinic_visits?: number;
   total_revenue?: number;
@@ -89,7 +89,7 @@ export default function AgentPerformanceDashboardPage() {
         total_tickets: item.tickets_count,
         average_response_time: item.average_response_time,
         clinic_visit_conversion_rate: item.clinic_visit_conversion_rate,
-        sla_violation_rate: item.sla_violation_rate,
+        // [SLA 기능 비활성화 2026-06-22] sla_violation_rate: item.sla_violation_rate,
         total_appointments: item.appointment_conversion_count,
         total_clinic_visits: item.clinic_visit_count,
         total_revenue: item.revenue,
@@ -154,9 +154,10 @@ export default function AgentPerformanceDashboardPage() {
   const avgConversionRate = totalAgents > 0
     ? agentPerformance.reduce((sum, agent) => sum + (agent.clinic_visit_conversion_rate || 0), 0) / totalAgents
     : 0;
-  const avgSlaViolationRate = totalAgents > 0
-    ? agentPerformance.reduce((sum, agent) => sum + (agent.sla_violation_rate || 0), 0) / totalAgents
-    : 0;
+  // [SLA 기능 비활성화 2026-06-22]
+  // const avgSlaViolationRate = totalAgents > 0
+  //   ? agentPerformance.reduce((sum, agent) => sum + (agent.sla_violation_rate || 0), 0) / totalAgents
+  //   : 0;
 
   const formatDuration = (minutes: number | undefined) => {
     if (typeof minutes !== 'number' || isNaN(minutes)) return '0분';
@@ -281,9 +282,11 @@ export default function AgentPerformanceDashboardPage() {
           <Grid item xs={12} sm={6} md={3}>
             <KpiCard title="평균 내원 전환율" value={formatPercentage(avgConversionRate)} icon={<TrendingUpIcon />} color="#4CAF50" />
           </Grid>
+          {/* [SLA 기능 비활성화 2026-06-22]
           <Grid item xs={12} sm={6} md={3}>
             <KpiCard title="평균 SLA 위반율" value={formatPercentage(avgSlaViolationRate)} icon={<ErrorOutlineIcon />} color="#EF5350" />
           </Grid>
+          */}
           <Grid item xs={12} sm={6} md={3}>
             <KpiCard title="총 상담자 수" value={totalAgents.toLocaleString()} icon={<PeopleAltIcon />} color="#FFA726" />
           </Grid>
@@ -301,7 +304,7 @@ export default function AgentPerformanceDashboardPage() {
                         <TableCell align="right">총 상담 건</TableCell>
                         <TableCell align="right">평균 응답속도</TableCell>
                         <TableCell align="right">내원 전환율</TableCell>
-                        <TableCell align="right">SLA 위반율</TableCell>
+                        {/* [SLA 기능 비활성화 2026-06-22] <TableCell align="right">SLA 위반율</TableCell> */}
                         <TableCell align="right">총 예약</TableCell>
                         <TableCell align="right">총 내원</TableCell>
                         <TableCell align="right">총 매출</TableCell>
@@ -314,7 +317,7 @@ export default function AgentPerformanceDashboardPage() {
                           <TableCell align="right">{(agent.total_tickets ?? 0).toLocaleString()}</TableCell>
                           <TableCell align="right">{formatDuration(agent.average_response_time)}</TableCell>
                           <TableCell align="right">{formatPercentage(agent.clinic_visit_conversion_rate)}</TableCell>
-                          <TableCell align="right">{formatPercentage(agent.sla_violation_rate)}</TableCell>
+                          {/* [SLA 기능 비활성화 2026-06-22] <TableCell align="right">{formatPercentage(agent.sla_violation_rate)}</TableCell> */}
                           <TableCell align="right">{(agent.total_appointments ?? 0).toLocaleString()}</TableCell>
                           <TableCell align="right">{(agent.total_clinic_visits ?? 0).toLocaleString()}</TableCell>
                           <TableCell align="right">{formatCurrency(agent.total_revenue)}</TableCell>

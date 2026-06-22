@@ -1,4 +1,4 @@
-import { AlertCircle, Clock } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
@@ -24,7 +24,8 @@ interface UrgentConsultationsProps {
 
 export function UrgentConsultations({ tickets }: UrgentConsultationsProps) {
   const urgentItems = tickets
-    .filter(t => t.sla_timer?.status === 'warning' || t.priority === '긴급')
+    // [SLA 기능 비활성화 2026-06-22] .filter(t => t.sla_timer?.status === 'warning' || t.priority === '긴급')
+    .filter(t => t.priority === '긴급')
     .slice(0, 5);
 
   return (
@@ -58,18 +59,21 @@ export function UrgentConsultations({ tickets }: UrgentConsultationsProps) {
                   </p>
                 </div>
 
+                {/* [SLA 기능 비활성화 2026-06-22]
                 {item.sla_timer && (
                   <div className="flex items-center gap-1.5 text-destructive">
                     <Clock className="h-4 w-4" />
                     <span className="text-sm font-semibold">{item.sla_timer.formatted}</span>
                   </div>
                 )}
+                */}
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline" className="text-xs">
                   상태: {item.state}
                 </Badge>
+                {/* [SLA 기능 비활성화 2026-06-22]
                 {item.sla_timer && (
                   <Badge
                     variant={item.sla_timer.status === 'warning' ? 'destructive' : 'outline'}
@@ -78,6 +82,7 @@ export function UrgentConsultations({ tickets }: UrgentConsultationsProps) {
                     {item.sla_timer.formatted}
                   </Badge>
                 )}
+                */}
               </div>
             </div>
           ))

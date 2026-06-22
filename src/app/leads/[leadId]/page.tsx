@@ -533,10 +533,12 @@ export default function LeadDetailPage() {
               <Chip label={priorityInfo.priority} size="small" sx={{ backgroundColor: priorityInfo.backgroundColor, color: priorityInfo.textColor }} />
             </Box>
           </Grid>
+          {/* [SLA 기능 비활성화 2026-06-22]
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary">SLA 상태</Typography>
             <Chip label={lead.sla_status} color="info" sx={{ mt: 1 }} />
           </Grid>
+          */}
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary">커뮤니케이션 횟수</Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>{lead.communication_count}회</Typography>
@@ -608,6 +610,7 @@ export default function LeadDetailPage() {
                           'default'
                         }
                       />
+                      {/* [SLA 기능 비활성화 2026-06-22]
                       {ticket.sla_timer && (
                         <Chip
                           label={ticket.sla_timer.formatted}
@@ -619,6 +622,7 @@ export default function LeadDetailPage() {
                           }
                         />
                       )}
+                      */}
                       {ticket.assignee_name && (
                         <Chip label={`담당: ${ticket.assignee_name}`} size="small" variant="outlined" />
                       )}
