@@ -18,6 +18,7 @@ interface Lead {
   utm_source: string | string[]; // 인입경로 (단일 또는 다중)
   utm_campaign?: string; // 캠페인
   last_contact_at: string; // 날짜
+  inquiry_date?: string; // 문의 날짜 (실제 저장된 값)
   score: number;
   assignee_name: string; // 담당자 이름
   sla_status: string; // SLA 상태 (백엔드 Ticket 모델의 sla_status)
@@ -706,9 +707,11 @@ export default function LeadsPage() {
       revenue: lead.revenue || 0,
       treatment: treatments,
       consultation_notes: lead.consultation_notes || '',
-      inquiry_date: lead.last_contact_at
-        ? new Date(lead.last_contact_at).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0],
+      inquiry_date: lead.inquiry_date
+        ? new Date(lead.inquiry_date).toISOString().split('T')[0]
+        : lead.last_contact_at
+          ? new Date(lead.last_contact_at).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
     });
     setAddLeadModalOpen(true);
   }, [availableAssignees]);
@@ -745,6 +748,7 @@ export default function LeadsPage() {
         memo: newLead.consultation_notes || undefined,
         assigned_user_id: newLead.assigned_user_id || undefined,
         utm_source: newLead.utm_source.length > 0 ? newLead.utm_source.join(', ') : undefined,
+        inquiry_date: newLead.inquiry_date || undefined,
       };
 
       // 1. 백엔드 API 호출
