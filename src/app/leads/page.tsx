@@ -590,7 +590,7 @@ export default function LeadsPage() {
   // 실제 사용자 목록을 API에서 가져오기
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await api.get('/api/users');
+      const response = await api.get('/api/users', { params: { per_page: 200 } });
       const users = response.data?.data || response.data;
       if (Array.isArray(users)) {
         const assignees = users

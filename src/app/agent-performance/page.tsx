@@ -7,7 +7,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import DashboardFilters from '@/components/DashboardFilters';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 interface AgentPerformanceData {
   user_id: string;
@@ -159,124 +159,16 @@ export default function AgentPerformanceDashboardPage() {
     }
   }, []);
 
-  // New function to fetch all users (agents)
+  // 실제 사용자 목록을 백엔드 API에서 가져오기 (관리 화면이므로 마스킹 해제 + 전체 페이지 조회)
   const fetchUsers = useCallback(async () => {
     setUserLoading(true);
     setUserError(null);
     try {
-      // Check if users exist in localStorage (SSR safe)
-      let users: AgentPerformanceData[];
-
-      if (typeof window !== 'undefined') {
-        const storedUsers = localStorage.getItem('mcrm_users');
-        if (storedUsers) {
-          users = JSON.parse(storedUsers);
-        } else {
-        // Mock users data for development (initial data)
-        const mockUsers: AgentPerformanceData[] = [
-          {
-            user_id: '1',
-            login_id: 'kim_agent',
-            name: '김상담',
-            email: 'kim.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic1',
-            phone: '010-1234-5678',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '2',
-            login_id: 'lee_agent',
-            name: '이상담',
-            email: 'lee.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic1',
-            phone: '010-2345-6789',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '3',
-            login_id: 'park_agent',
-            name: '박상담',
-            email: 'park.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic2',
-            phone: '010-3456-7890',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '4',
-            login_id: 'choi_admin',
-            name: '최관리자',
-            email: 'choi.admin@clinic.com',
-            role: '지점관리자',
-            clinic_id: 'clinic1',
-            phone: '010-4567-8901',
-            password: 'admin123',
-            active: true
-          }
-        ];
-          // Store initial data to localStorage
-          localStorage.setItem('mcrm_users', JSON.stringify(mockUsers));
-          users = mockUsers;
-        }
-      } else {
-        // SSR fallback - use mock data
-        users = [
-          {
-            user_id: '1',
-            login_id: 'kim_agent',
-            name: '김상담',
-            email: 'kim.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic1',
-            phone: '010-1234-5678',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '2',
-            login_id: 'lee_agent',
-            name: '이상담',
-            email: 'lee.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic1',
-            phone: '010-2345-6789',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '3',
-            login_id: 'park_agent',
-            name: '박상담',
-            email: 'park.agent@clinic.com',
-            role: '상담매니저',
-            clinic_id: 'clinic2',
-            phone: '010-3456-7890',
-            password: 'password123',
-            active: true
-          },
-          {
-            user_id: '4',
-            login_id: 'choi_admin',
-            name: '최관리자',
-            email: 'choi.admin@clinic.com',
-            role: '지점관리자',
-            clinic_id: 'clinic1',
-            phone: '010-4567-8901',
-            password: 'admin123',
-            active: true
-          }
-        ];
-      }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setUsers(users);
+      const response = await api.get('/api/users', {
+        params: { mask_sensitive: false, per_page: 200 },
+      });
+      const usersData = response.data?.data || response.data;
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (err) {
       console.error("Failed to fetch users:", err);
       setUserError("Failed to load user data. Please try again.");
@@ -362,63 +254,47 @@ export default function AgentPerformanceDashboardPage() {
       return;
     }
 
-    // Check for duplicate login_id
-    const duplicateLoginId = users.find(user =>
-      user.login_id === currentUser.login_id && user.user_id !== currentUser.user_id
-    );
-    if (duplicateLoginId) {
-      setSnackbarMessage("이미 사용 중인 로그인 아이디입니다.");
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-      return;
-    }
-
     setUserLoading(true);
     setUserError(null);
     try {
-      // Mock implementation for development
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      const payload: Record<string, unknown> = {
+        login_id: currentUser.login_id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role || '상담매니저',
+        clinic_id: currentUser.clinic_id || null,
+        phone: currentUser.phone || null,
+        active: currentUser.active ?? true, // 명시적으로 보내지 않으면 신규 사용자가 비활성으로 저장되던 버그 방지
+      };
+      if (currentUser.password) {
+        payload.password = currentUser.password;
+      }
 
       if (currentUser.user_id) {
-        // Update existing user in mock data
-        const updatedUsers = users.map(user =>
-          user.user_id === currentUser.user_id ? { ...currentUser } : user
-        );
-        setUsers(updatedUsers);
-        // Save to localStorage (SSR safe)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('mcrm_users', JSON.stringify(updatedUsers));
-        }
+        await api.put(`/api/users/${currentUser.user_id}`, payload);
         setSnackbarMessage("사용자 정보가 성공적으로 업데이트되었습니다.");
-        setSnackbarSeverity('success');
       } else {
-        // Add new user to mock data
-        const newUser = {
-          ...currentUser,
-          user_id: `user_${Date.now()}`, // Generate mock ID
-          password: currentUser.password || (currentUser.role === '지점관리자' ? 'admin123' : 'password123'), // 기본 비밀번호 설정
-        };
-        const updatedUsers = [...users, newUser];
-        setUsers(updatedUsers);
-        // Save to localStorage (SSR safe)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('mcrm_users', JSON.stringify(updatedUsers));
-        }
+        await api.post('/api/users', payload);
         setSnackbarMessage("새 사용자가 성공적으로 추가되었습니다.");
-        setSnackbarSeverity('success');
       }
+      setSnackbarSeverity('success');
       setOpenUserModal(false);
       setSnackbarOpen(true);
+      await fetchUsers(); // 서버 상태로 다시 동기화 (목록에 즉시 정확하게 반영)
     } catch (err: any) {
       console.error("Failed to add/update user:", err);
-      setUserError("사용자 추가/업데이트에 실패했습니다. " + (err.response?.data?.message || err.message));
-      setSnackbarMessage("사용자 추가/업데이트에 실패했습니다.");
+      const validationErrors = err.response?.data?.errors;
+      const message = validationErrors
+        ? Object.values(validationErrors).flat().join(' ')
+        : (err.response?.data?.message || err.message);
+      setUserError("사용자 추가/업데이트에 실패했습니다. " + message);
+      setSnackbarMessage("사용자 추가/업데이트에 실패했습니다: " + message);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
       setUserLoading(false);
     }
-  }, [currentUser, users]);
+  }, [currentUser, fetchUsers]);
 
   const handleDeleteUser = useCallback(async (userId: string) => {
     if (!confirm("정말로 이 사용자를 삭제하시겠습니까?")) return;
@@ -426,29 +302,22 @@ export default function AgentPerformanceDashboardPage() {
     setUserLoading(true);
     setUserError(null);
     try {
-      // Mock implementation for development
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-
-      // Remove user from mock data
-      const updatedUsers = users.filter(user => user.user_id !== userId);
-      setUsers(updatedUsers);
-      // Save to localStorage (SSR safe)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mcrm_users', JSON.stringify(updatedUsers));
-      }
+      await api.delete(`/api/users/${userId}`);
       setSnackbarMessage("사용자가 성공적으로 삭제되었습니다.");
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
+      await fetchUsers();
     } catch (err: any) {
       console.error("Failed to delete user:", err);
-      setUserError("사용자 삭제에 실패했습니다. " + (err.response?.data?.message || err.message));
+      const message = err.response?.data?.message || err.message;
+      setUserError("사용자 삭제에 실패했습니다. " + message);
       setSnackbarMessage("사용자 삭제에 실패했습니다.");
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
       setUserLoading(false);
     }
-  }, [users]);
+  }, [fetchUsers]);
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
@@ -536,7 +405,7 @@ export default function AgentPerformanceDashboardPage() {
             <Paper sx={{ p: 3 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6" gutterBottom>사용자 관리</Typography>
-                <Button variant="contained" onClick={() => { setCurrentUser(null); setOpenUserModal(true); }}>
+                <Button variant="contained" onClick={() => { setCurrentUser({ role: '상담매니저', active: true } as AgentPerformanceData); setOpenUserModal(true); }}>
                   새 사용자 추가
                 </Button>
               </Box>
@@ -584,7 +453,7 @@ export default function AgentPerformanceDashboardPage() {
 
           {/* User Add/Edit Modal */}
           <Dialog open={openUserModal} onClose={() => setOpenUserModal(false)}>
-            <DialogTitle>{currentUser ? '사용자 수정' : '새 사용자 추가'}</DialogTitle>
+            <DialogTitle>{currentUser?.user_id ? '사용자 수정' : '새 사용자 추가'}</DialogTitle>
             <DialogContent>
               <TextField
                 autoFocus
@@ -686,7 +555,7 @@ export default function AgentPerformanceDashboardPage() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenUserModal(false)}>취소</Button>
-              <Button onClick={handleAddOrUpdateUser} variant="contained">{currentUser ? '수정' : '추가'}</Button>
+              <Button onClick={handleAddOrUpdateUser} variant="contained">{currentUser?.user_id ? '수정' : '추가'}</Button>
             </DialogActions>
           </Dialog>
 
