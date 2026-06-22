@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, Card, CardContent, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Alert, Snackbar } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -67,97 +67,41 @@ export default function AgentPerformanceDashboardPage() {
   const [endDate, setEndDate] = useState<Date | null>(new Date());
   const [selectedClinicId, setSelectedClinicId] = useState<string>('');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
-  const [clinics, setClinics] = useState<Array<{ clinic_id: string; name: string }>>([]);
 
   // 필터 적용
   const fetchAgentPerformance = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // localStorage에서 리드 데이터 가져오기
-      let leadsData: any[] = [];
-      if (typeof window !== 'undefined') {
-        const storedLeads = localStorage.getItem('mcrm_leads');
-        if (storedLeads) {
-          leadsData = JSON.parse(storedLeads);
-        }
-      }
-
-      // 담당자별 매출 집계
-      const agentStats: { [key: string]: { revenue: number; count: number } } = {};
-      leadsData.forEach((lead: any) => {
-        const assignee = lead.assignee_name || '미배정';
-        if (!agentStats[assignee]) {
-          agentStats[assignee] = { revenue: 0, count: 0 };
-        }
-        agentStats[assignee].revenue += lead.revenue || 0;
-        agentStats[assignee].count += 1;
+      const response = await api.get('/api/dashboards/agent-performance', {
+        params: {
+          start_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
+          end_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
+          clinic_id: selectedClinicId || undefined,
+          agent_id: selectedAgentId || undefined,
+        },
       });
-
-      // Mock data for development (실제 리드 데이터의 매출 반영)
-      const mockAgentPerformance: AgentPerformanceData[] = [
-        {
-          user_id: '1',
-          login_id: 'kim_agent',
-          name: '김상담',
-          total_tickets: 45,
-          average_response_time: 12,
-          clinic_visit_conversion_rate: 78.5,
-          sla_violation_rate: 5.2,
-          total_appointments: 28,
-          total_clinic_visits: 22,
-          total_revenue: agentStats['김상담']?.revenue || 3300000,
-          email: 'kim.agent@clinic.com',
-          role: '상담매니저',
-          clinic_id: 'clinic1',
-          active: true
-        },
-        {
-          user_id: '2',
-          login_id: 'lee_agent',
-          name: '이상담',
-          total_tickets: 38,
-          average_response_time: 15,
-          clinic_visit_conversion_rate: 82.1,
-          sla_violation_rate: 3.1,
-          total_appointments: 25,
-          total_clinic_visits: 21,
-          total_revenue: agentStats['이상담']?.revenue || 3150000,
-          email: 'lee.agent@clinic.com',
-          role: '상담매니저',
-          clinic_id: 'clinic1',
-          active: true
-        },
-        {
-          user_id: '3',
-          login_id: 'park_agent',
-          name: '박상담',
-          total_tickets: 52,
-          average_response_time: 8,
-          clinic_visit_conversion_rate: 74.3,
-          sla_violation_rate: 7.8,
-          total_appointments: 32,
-          total_clinic_visits: 24,
-          total_revenue: agentStats['박상담']?.revenue || 3600000,
-          email: 'park.agent@clinic.com',
-          role: '상담매니저',
-          clinic_id: 'clinic2',
-          active: true
-        }
-      ];
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      setAgentPerformance(mockAgentPerformance);
-
+      const data = Array.isArray(response.data) ? response.data : [];
+      const mapped: AgentPerformanceData[] = data.map((item: any) => ({
+        user_id: item.agent_id,
+        name: item.agent_name,
+        clinic_id: item.clinic_id,
+        total_tickets: item.tickets_count,
+        average_response_time: item.average_response_time,
+        clinic_visit_conversion_rate: item.clinic_visit_conversion_rate,
+        sla_violation_rate: item.sla_violation_rate,
+        total_appointments: item.appointment_conversion_count,
+        total_clinic_visits: item.clinic_visit_count,
+        total_revenue: item.revenue,
+      }));
+      setAgentPerformance(mapped);
     } catch (err) {
       console.error("Failed to fetch agent performance data:", err);
-      setError("Failed to load agent performance data. Please try again.");
+      setError("상담자 성과 데이터를 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate, selectedClinicId, selectedAgentId]);
 
   // 실제 사용자 목록을 백엔드 API에서 가져오기 (관리 화면이므로 마스킹 해제 + 전체 페이지 조회)
   const fetchUsers = useCallback(async () => {
@@ -180,28 +124,14 @@ export default function AgentPerformanceDashboardPage() {
     }
   }, []);
 
-  // 지점 목록 가져오기
-  const fetchClinics = useCallback(async () => {
-    try {
-      // Mock clinics data for development
-      const mockClinics = [
-        { clinic_id: 'clinic1', name: '강남점' },
-        { clinic_id: 'clinic2', name: '종로점' },
-        { clinic_id: 'clinic3', name: '홍대점' },
-        { clinic_id: 'clinic4', name: '신촌점' }
-      ];
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setClinics(mockClinics);
-    } catch (err) {
-      console.error("Failed to fetch clinics:", err);
-      setSnackbarMessage("지점 목록을 불러오는데 실패했습니다.");
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-    }
-  }, []);
+  // 지점 목록: 별도 clinics 마스터 테이블이 없으므로 실제 사용자 목록(users)의
+  // clinic_id 값에서 중복 제거해 도출 (목업 지점 ID는 실제 값과 안 맞아 필터가 항상 빈 결과를 냈음)
+  const clinics = useMemo(() => {
+    const ids = Array.from(
+      new Set(users.map((u) => u.clinic_id).filter((id): id is string => Boolean(id)))
+    );
+    return ids.map((id) => ({ clinic_id: id, name: id }));
+  }, [users]);
 
   // 필터 초기화
   const handleResetFilters = useCallback(() => {
@@ -214,8 +144,7 @@ export default function AgentPerformanceDashboardPage() {
   useEffect(() => {
     fetchAgentPerformance();
     fetchUsers();
-    fetchClinics();
-  }, [fetchAgentPerformance, fetchUsers, fetchClinics]);
+  }, [fetchAgentPerformance, fetchUsers]);
 
   // KPI 계산 (전체 상담원 대상)
   const totalAgents = agentPerformance.length;
