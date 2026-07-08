@@ -2,82 +2,186 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 0 0% 99%;
-  --foreground: 270 10% 20%;
-  --card: 0 0% 100%;
-  --card-foreground: 270 10% 20%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 270 10% 20%;
-  --primary: 275 80% 55%;
-  --primary-foreground: 0 0% 99%;
-  --secondary: 270 10% 97%;
-  --secondary-foreground: 270 10% 20%;
-  --muted: 270 10% 97%;
-  --muted-foreground: 270 5% 50%;
-  --accent: 280 65% 68%;
-  --accent-foreground: 0 0% 99%;
-  --destructive: 25 84% 55%;
-  --destructive-foreground: 0 0% 99%;
-  --border: 270 10% 93%;
-  --input: 270 10% 93%;
-  --ring: 275 80% 55%;
-  --radius: 0.5rem;
-  --chart-1: 280 65% 68%;
-  --chart-2: 275 70% 62%;
-  --chart-3: 130 60% 60%;
-  --chart-4: 25 84% 55%;
-  --chart-5: 290 60% 70%;
-  --sidebar: 275 80% 55%;
-  --sidebar-foreground: 0 0% 99%;
-  --sidebar-primary: 0 0% 99%;
-  --sidebar-primary-foreground: 275 80% 55%;
-  --sidebar-accent: 275 80% 48%;
-  --sidebar-accent-foreground: 0 0% 99%;
-  --sidebar-border: 275 75% 48%;
-  --sidebar-ring: 0 0% 99%;
-}
+/* ================================================================
+   Toss Design System (TDS) — 디자인 토큰
+   화이트 캔버스 + cool-grey 뉴트럴 + 단일 강조색 Toss Blue
+   화면당 하나의 primary CTA, 평면 표면, 헤어라인 보더
+   ================================================================ */
 
-.dark {
-  --background: 270 10% 12%;
-  --foreground: 270 5% 95%;
-  --card: 270 10% 15%;
-  --card-foreground: 270 5% 95%;
-  --popover: 270 10% 15%;
-  --popover-foreground: 270 5% 95%;
-  --primary: 280 65% 68%;
-  --primary-foreground: 270 10% 12%;
-  --secondary: 270 10% 20%;
-  --secondary-foreground: 270 5% 95%;
-  --muted: 270 10% 20%;
-  --muted-foreground: 270 5% 55%;
-  --accent: 280 65% 68%;
-  --accent-foreground: 270 10% 12%;
-  --destructive: 25 84% 55%;
-  --destructive-foreground: 270 5% 95%;
-  --border: 270 10% 22%;
-  --input: 270 10% 22%;
-  --ring: 280 65% 68%;
-  --chart-1: 280 65% 68%;
-  --chart-2: 275 70% 62%;
-  --chart-3: 130 60% 60%;
-  --chart-4: 25 84% 55%;
-  --chart-5: 290 60% 70%;
-  --sidebar: 270 10% 15%;
-  --sidebar-foreground: 270 5% 95%;
-  --sidebar-primary: 280 65% 68%;
-  --sidebar-primary-foreground: 270 10% 12%;
-  --sidebar-accent: 270 10% 20%;
-  --sidebar-accent-foreground: 270 5% 95%;
-  --sidebar-border: 270 10% 22%;
-  --sidebar-ring: 280 65% 68%;
+:root {
+  /* ---- Brand (Toss Blue) ---- */
+  --blue-50:  #E8F3FF;
+  --blue-500: #3182F6;   /* 카노니컬 Toss Blue — 화면당 하나의 primary CTA */
+  --blue-600: #1B64DA;   /* pressed */
+  --blue-700: #1957C2;
+
+  /* ---- Greyscale (cool-blue tinted, 순수 검정 없음) ---- */
+  --grey-900: #191F28;   /* primary text */
+  --grey-800: #333D4B;
+  --grey-700: #4E5968;   /* secondary text */
+  --grey-600: #6B7684;
+  --grey-500: #8B95A1;
+  --grey-400: #B0B8C1;   /* disabled text, strong line */
+  --grey-300: #D1D6DB;
+  --grey-200: #E5E8EB;   /* default divider/border */
+  --grey-150: #EBEEF1;
+  --grey-100: #F2F4F6;   /* secondary surface */
+  --grey-50:  #F9FAFB;
+  --white:    #FFFFFF;
+
+  /* ---- Semantic ---- */
+  --red-500:    #F04452;  /* error / danger */
+  --green-500:  #00A05B;  /* success */
+  --orange-500: #FE9800;  /* warning */
+  --yellow-500: #F5C63F;  /* 일러스트 전용 */
+
+  /* ---- Semantic alpha (navy-900 베이스) ---- */
+  --fg-tertiary:   rgba(6, 14, 35, 0.58);  /* 흐린 본문 텍스트 */
+  --fg-quaternary: rgba(6, 14, 35, 0.28);  /* placeholder */
+  --line-subtle:   rgba(0, 0, 0, 0.08);    /* 그레이 배경 위 카드 보더 */
+  --bg-overlay:    rgba(0, 0, 0, 0.56);    /* bottom-sheet scrim */
+  --press-overlay: rgba(0, 0, 0, 0.26);    /* pressed-state tint */
+  --disabled-opacity: 0.30;
+
+  /* ---- Semantic alias ---- */
+  --fill-brand:     var(--blue-500);
+  --fill-primary:   var(--grey-900);
+  --fill-secondary: var(--grey-100);
+  --fill-weak:      var(--grey-50);
+  --fill-danger:    var(--red-500);
+  --text-primary:   var(--grey-900);
+  --text-secondary: var(--grey-700);
+  --text-tertiary:  var(--fg-tertiary);
+  --text-brand:     var(--blue-500);
+  --text-danger:    var(--red-500);
+  --text-alt:       var(--white);
+  --border-primary:   var(--blue-500);   /* focused input */
+  --border-secondary: var(--grey-200);   /* default divider */
+  --border-strong:    var(--grey-400);
+
+  /* ---- 스페이싱 (4px 베이스) ---- */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px;  --space-7: 28px;  --space-8: 32px;
+  --space-10: 40px; --space-12: 48px; --space-16: 64px; --space-20: 80px;
+  --screen-gutter: 24px;   /* 화면 outer padding */
+  --tap-min: 44px;
+
+  /* ---- 라운드 ladder ---- */
+  --radius-xs: 4px;    /* small badges */
+  --radius-s: 8px;     /* inline tags */
+  --radius-m: 12px;    /* text inputs, M button */
+  --radius-l: 14px;    /* L button */
+  --radius-xl: 16px;   /* XL button, cards */
+  --radius-2xl: 20px;  /* sheets, dialogs */
+  --radius-3xl: 24px;  /* big cards / sections */
+  --radius-4xl: 32px;  /* hero blocks */
+  --radius-full: 999px;
+
+  /* ---- 그림자 (navy 알파, floating/modal 전용) ---- */
+  --shadow-1: 0 1px 2px rgba(6,14,35,0.04), 0 1px 1px rgba(6,14,35,0.04);
+  --shadow-2: 0 4px 12px rgba(6,14,35,0.06), 0 1px 2px rgba(6,14,35,0.04);
+  --shadow-3: 0 12px 32px rgba(6,14,35,0.10), 0 2px 6px rgba(6,14,35,0.06);
+  --shadow-toast: 0 8px 24px rgba(6,14,35,0.16);
+
+  /* ---- 모션 ---- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* ---- 폰트 (TPS 대체: Pretendard) ---- */
+  --font-base: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    'SF Pro Text', 'SF Pro', 'Apple SD Gothic Neo', 'Noto Sans KR',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* ---- 레거시 호환 alias (기존 var(--gray-*) / --insight-* 참조 유지) ---- */
+  --black: var(--grey-900);
+  --gray-900: var(--grey-900);
+  --gray-600: var(--grey-600);
+  --gray-500: var(--grey-500);
+  --gray-400: var(--grey-400);
+  --gray-300: var(--grey-300);
+  --gray-200: var(--grey-200);
+  --gray-150: var(--grey-150);
+  --gray-100: var(--grey-100);
+  --insight-orange: var(--red-500);   /* 구 포인트 색 → 시맨틱 danger로 매핑 */
+  --insight-blue: var(--blue-500);
+  --insight-amber: var(--orange-500);
+  --surface-muted: var(--grey-100);
+  --line-default: var(--grey-200);
+
+  /* ---- Tailwind/shadcn 호환 토큰 (TDS 값 매핑) ---- */
+  --background: 220 20% 97%;          /* grey-100 근사 */
+  --foreground: 218 24% 13%;          /* grey-900 */
+  --card: 0 0% 100%;
+  --card-foreground: 218 24% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 218 24% 13%;
+  --primary: 215 91% 58%;             /* Toss Blue #3182F6 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 20% 96%;
+  --secondary-foreground: 218 24% 13%;
+  --muted: 220 20% 96%;
+  --muted-foreground: 217 12% 36%;    /* grey-700 */
+  --accent: 215 91% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 355 85% 61%;         /* red-500 */
+  --destructive-foreground: 0 0% 100%;
+  --border: 216 13% 91%;              /* grey-200 */
+  --input: 216 13% 91%;
+  --ring: 215 91% 58%;
+  --radius: 12px;
+  --chart-1: 215 91% 58%;             /* blue */
+  --chart-2: 218 24% 13%;             /* grey-900 */
+  --chart-3: 39 91% 60%;              /* orange/yellow */
+  --chart-4: 152 100% 31%;            /* green */
+  --chart-5: 217 12% 59%;             /* grey-500 */
 }
 
 * {
   border-color: hsl(var(--border));
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: var(--grey-100);
+  color: var(--text-primary);
+  font-family: var(--font-base);
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ================================================================
+   TDS 타이포그래피 유틸 클래스 (type ramp)
+   ================================================================ */
+.t-display-1 { font-size: 56px; line-height: 1.3; letter-spacing: -0.005em; font-weight: 700; }
+.t-display-2 { font-size: 40px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+.t-h1 { font-size: 28px; line-height: 1.3; letter-spacing: -0.02em; font-weight: 700; }
+.t-h2 { font-size: 24px; line-height: 1.3; letter-spacing: -0.02em; font-weight: 700; }
+.t-h3 { font-size: 22px; line-height: 1.3; letter-spacing: -0.015em; font-weight: 700; }
+.t-h4 { font-size: 20px; line-height: 1.35; letter-spacing: -0.015em; font-weight: 700; }
+.t-title-1 { font-size: 18px; line-height: 1.45; letter-spacing: -0.01em; font-weight: 600; }
+.t-title-2 { font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; font-weight: 600; }
+.t-body-1 { font-size: 17px; line-height: 1.5; letter-spacing: -0.005em; font-weight: 400; }
+.t-body-2 { font-size: 15px; line-height: 1.5; letter-spacing: -0.005em; font-weight: 400; }
+.t-body-3 { font-size: 13px; line-height: 1.5; font-weight: 400; }
+.t-label-l { font-size: 17px; line-height: 1.25; letter-spacing: -0.005em; font-weight: 700; }
+.t-label-m { font-size: 15px; line-height: 1.25; letter-spacing: -0.005em; font-weight: 600; }
+.t-label-s { font-size: 13px; line-height: 1.25; font-weight: 600; }
+.t-caption { font-size: 12px; line-height: 1.4; font-weight: 500; }
+.t-caption-s { font-size: 11px; line-height: 1.4; font-weight: 500; }
+
+/* 실시간 금융 데이터용 tabular figure */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 모바일에서 넓은 콘텐츠(테이블 등) 가로 스크롤 처리 */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

@@ -199,7 +199,7 @@ export default function AdPerformancePage() {
               <Typography variant="body2" color="text.secondary">
                 네이버·구글·메타 광고 API 연동 또는 데이터 임포트 후 조회하세요.
               </Typography>
-              <Box sx={{ mt: 2, p: 1.5, bgcolor: '#f5f5f5', borderRadius: 1, display: 'inline-block', textAlign: 'left' }}>
+              <Box sx={{ mt: 2, p: 1.5, bgcolor: '#F6F6F6', borderRadius: 1, display: 'inline-block', textAlign: 'left' }}>
                 <Typography variant="caption" fontFamily="monospace" color="text.secondary">
                   POST /api/ad-webhook/{'{platform}'}<br />
                   GET  /api/marketing-stats?platform=naver&period_type=week<br />
@@ -222,7 +222,7 @@ export default function AdPerformancePage() {
               {platformData.channels?.map((ch: any) => (
                 <Accordion key={ch.channel_type} defaultExpanded disableGutters elevation={0}
                   sx={{ '&:before': { display: 'none' }, borderBottom: '1px solid #f0f0f0' }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, bgcolor: '#fafafa' }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, bgcolor: '#F6F6F6' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="subtitle2" fontWeight="bold">{ch.channel_label}</Typography>
                       <Chip label={ch.channel_type} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
@@ -267,7 +267,7 @@ export default function AdPerformancePage() {
                             const sumConv = d.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0);
                             const sumCost = d.reduce((s: number, r: any) => s + (r.cost ?? 0), 0);
                             return (
-                              <TableRow sx={{ bgcolor: '#e3f2fd' }}>
+                              <TableRow sx={{ bgcolor: '#F1F1F1' }}>
                                 <TableCell colSpan={4} sx={{ fontWeight: 'bold' }}>소계</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>{fmtNum(sumImpr)}</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>{fmtNum(sumClk)}</TableCell>

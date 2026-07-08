@@ -2,6 +2,7 @@
 
 import {
   Home,
+  Inbox,
   Users as PeopleIcon,
   MessageSquare as TicketIcon,
   Calendar,
@@ -33,7 +34,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: "홈", href: "/" },
-  { icon: PeopleIcon, label: "문의", href: "/leads" },
+  { icon: Inbox, label: "문의", href: "/leads" },
   { icon: TicketIcon, label: "상담", href: "/tickets" },
   { icon: Calendar, label: "예약", href: "/appointments" },
   { icon: TrendingUp, label: "채널 피벗", href: "/channel-pivot" },
@@ -111,7 +112,7 @@ export function Sidebar() {
                   </button>
                   {isExpanded && (
                     <div className="ml-7 mt-1 space-y-1">
-                      {item.children.map((child) => (
+                      {item.children?.map((child) => (
                         <Link
                           key={child.href}
                           href={child.href}

@@ -34,6 +34,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { getPriorityInfoFromScore } from '@/lib/leadPriority';
+import PageHeader from '@/components/PageHeader';
 
 interface Lead {
   lead_id: string;
@@ -484,27 +485,27 @@ export default function LeadDetailPage() {
   const priorityInfo = getPriorityInfoFromScore(lead.score);
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={handleBack}>
-            <ArrowBackIcon />
+    <Box sx={{ flexGrow: 1, p: { xs: 0, md: 1 } }}>
+      <PageHeader
+        title="문의 상세"
+        leading={
+          <IconButton onClick={handleBack} aria-label="뒤로" size="small" sx={{ mr: 0.5 }}>
+            <ArrowBackIcon fontSize="small" />
           </IconButton>
-          <Typography variant="h4" component="h1">
-            문의 상세
-          </Typography>
-        </Box>
-        <Box>
-          <Button startIcon={<EditIcon />} onClick={handleEdit} sx={{ mr: 1 }}>
-            수정
-          </Button>
-          <Button startIcon={<DeleteIcon />} color="error" onClick={handleDelete}>
-            삭제
-          </Button>
-        </Box>
-      </Box>
+        }
+        actions={
+          <>
+            <Button size="small" startIcon={<EditIcon />} onClick={handleEdit}>
+              수정
+            </Button>
+            <Button size="small" startIcon={<DeleteIcon />} color="error" onClick={handleDelete}>
+              삭제
+            </Button>
+          </>
+        }
+      />
 
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" color="text.secondary">이름</Typography>
@@ -564,7 +565,7 @@ export default function LeadDetailPage() {
           {lead.consultation_notes && (
             <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">상담 메모</Typography>
-              <Typography variant="body1" sx={{ mt: 1, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="body1" sx={{ mt: 1, p: 2, bgcolor: 'var(--grey-100)', borderRadius: '12px' }}>
                 {lead.consultation_notes}
               </Typography>
             </Grid>
@@ -574,7 +575,7 @@ export default function LeadDetailPage() {
 
       {/* 관련 상담 티켓 */}
       {relatedTickets.length > 0 && (
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>관련 상담 티켓</Typography>
           <Grid container spacing={2}>
             {relatedTickets.map((ticket) => (
@@ -638,7 +639,7 @@ export default function LeadDetailPage() {
         </Paper>
       )}
 
-      <Paper sx={{ mb: 3 }}>
+      <Paper variant="outlined" sx={{ mb: 3 }}>
         <Tabs value={currentTab} onChange={handleTabChange}>
           <Tab label="타임라인" />
           <Tab label="상담 내역" />

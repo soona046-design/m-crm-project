@@ -69,7 +69,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: '20px', sm: 3 }, // 모바일: --screen-gutter 20px
+
           width: {
             xs: '100%',
             sm: `calc(100% - ${currentDrawerWidth}px)`

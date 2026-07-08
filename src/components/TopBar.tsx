@@ -20,13 +20,13 @@ import MoreIcon from '@mui/icons-material/MoreVert';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 
-// 검색 바 스타일링
+// 검색 바 스타일링 — Insight DS: 뮤트 그레이 표면 + pill
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  borderRadius: 999,
+  backgroundColor: 'var(--gray-100)',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+    backgroundColor: 'var(--gray-150)',
   },
   marginRight: theme.spacing(2),
   marginLeft: 0,
@@ -45,6 +45,7 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  color: 'var(--gray-500)',
 }));
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
@@ -195,7 +196,7 @@ export default function TopBar({ onMenuClick, isMobile }: TopBarProps) {
   );
 
   return (
-    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }} color="primary">
+    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
         <IconButton
           size="large"
@@ -211,7 +212,7 @@ export default function TopBar({ onMenuClick, isMobile }: TopBarProps) {
           variant="h6"
           noWrap
           component="div"
-          sx={{ display: { xs: 'none', sm: 'block' } }}
+          sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 700, letterSpacing: '-0.025em' }}
         >
           MCRM
         </Typography>

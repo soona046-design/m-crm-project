@@ -93,7 +93,7 @@ export default function FunnelDropoffTable({ channel, startDate, endDate }: Prop
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: '#F6F6F6' }}>
                     <TableCell>채널</TableCell>
                     <TableCell>업체명</TableCell>
                     <TableCell>연락처</TableCell>

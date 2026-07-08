@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/axios';
 import { StatsCards } from '@/components/StatsCards';
 import { RecentInquiries } from '@/components/RecentInquiries';
 // [SLA 기능 비활성화 2026-06-22] import { UrgentConsultations } from '@/components/UrgentConsultations';
@@ -50,6 +51,8 @@ interface DashboardData {
   leads: Lead[];
   tickets: Ticket[];
   users: User[];
+  totalLeadsCount: number;
+  totalUsersCount: number;
   loading: boolean;
 }
 
@@ -59,6 +62,8 @@ export default function HomePage() {
     leads: [],
     tickets: [],
     users: [],
+    totalLeadsCount: 0,
+    totalUsersCount: 0,
     loading: true
   });
 
@@ -67,64 +72,58 @@ export default function HomePage() {
       try {
         setDashboardData(prev => ({ ...prev, loading: true }));
 
-        // Load leads from localStorage
-        const storedLeads = localStorage.getItem('mcrm_leads');
-        const leads: Lead[] = storedLeads ? JSON.parse(storedLeads) : [];
+        const [leadsRes, ticketsRes, usersRes] = await Promise.all([
+          api.get('/api/leads', { params: { per_page: 50, sort_by: 'created_at', sort_order: 'desc' } }),
+          api.get('/api/tickets', { params: { per_page: 200, sort_by: 'created_at', sort_order: 'desc' } }),
+          api.get('/api/users', { params: { per_page: 200 } }),
+        ]);
 
-        // Load users from localStorage
-        const storedUsers = localStorage.getItem('mcrm_users');
-        const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+        const leadsPayload = leadsRes.data;
+        const ticketsPayload = ticketsRes.data;
+        const usersPayload = usersRes.data;
 
-        // Mock tickets data
-        const mockTickets: Ticket[] = [
-          {
-            ticket_id: 'ticket_001',
-            lead_id: 'lead_001',
-            lead_name: '김환자',
-            title: '임플란트 상담 문의',
-            priority: '높음',
-            assignee_name: '김상담',
-            state: '진행',
-            created_at: '2025-09-29T08:00:00Z',
-            // [SLA 기능 비활성화 2026-06-22]
-            // sla_timer: {
-            //   remaining: 120,
-            //   formatted: '2시간 남음',
-            //   status: 'normal'
-            // }
-          },
-          {
-            ticket_id: 'ticket_002',
-            lead_id: 'lead_002',
-            lead_name: '이환자',
-            title: '교정 문의',
-            priority: '긴급',
-            assignee_name: '이상담',
-            state: '진행',
-            created_at: '2025-09-29T10:00:00Z',
-            // [SLA 기능 비활성화 2026-06-22]
-            // sla_timer: {
-            //   remaining: 30,
-            //   formatted: '30분 남음',
-            //   status: 'warning'
-            // }
-          },
-          {
-            ticket_id: 'ticket_003',
-            lead_id: 'lead_003',
-            lead_name: '박환자',
-            title: '미응답 - 스케일링 예약',
-            priority: '일반',
-            assignee_name: '박상담',
-            state: '신규',
-            created_at: '2025-09-29T07:00:00Z'
-          }
-        ];
+        const leadsData: any[] = leadsPayload?.data ?? leadsPayload ?? [];
+        const ticketsData: any[] = ticketsPayload?.data ?? ticketsPayload ?? [];
+        const usersData: any[] = usersPayload?.data ?? usersPayload ?? [];
+
+        const leads: Lead[] = leadsData.map((l) => ({
+          lead_id: l.lead_id,
+          name: l.name,
+          primary_phone: l.primary_phone,
+          status: l.status,
+          utm_source: l.utm_source,
+          last_contact_at: l.last_contact_at ?? l.created_at,
+          score: l.score,
+          assignee_name: l.assignee_name,
+          sla_status: '-', // [SLA 기능 비활성화 2026-06-22] 백엔드가 더 이상 내려주지 않음, 타입 호환용 자리값(미표시)
+        }));
+
+        const tickets: Ticket[] = ticketsData.map((t) => ({
+          ticket_id: t.ticket_id,
+          lead_id: t.lead_id,
+          lead_name: t.lead_name,
+          title: t.title ?? t.notes ?? '',
+          priority: t.priority,
+          state: t.state,
+          assignee_name: t.assignee_name,
+          created_at: t.created_at,
+        }));
+
+        const users: User[] = usersData.map((u) => ({
+          user_id: u.user_id,
+          login_id: u.login_id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          clinic_id: u.clinic_id,
+        }));
 
         setDashboardData({
           leads,
-          tickets: mockTickets,
+          tickets,
           users,
+          totalLeadsCount: leadsPayload?.total ?? leads.length,
+          totalUsersCount: usersPayload?.total ?? users.length,
           loading: false
         });
       } catch (error) {
@@ -149,19 +148,17 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <StatsCards
-        totalLeads={dashboardData.leads.length}
+        totalLeads={dashboardData.totalLeadsCount}
         activeTickets={dashboardData.tickets.filter(t => t.state !== '완료').length}
-        totalUsers={dashboardData.users.length}
+        totalUsers={dashboardData.totalUsersCount}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RecentInquiries leads={dashboardData.leads} />
-        {/* [SLA 기능 비활성화 2026-06-22] <UrgentConsultations tickets={dashboardData.tickets} /> */}
-      </div>
+      {/* [SLA 기능 비활성화 2026-06-22] UrgentConsultations 제거로 RecentInquiries가 단독이라 전체 폭으로 표시 */}
+      <RecentInquiries leads={dashboardData.leads} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <InquiryDistribution leads={dashboardData.leads} />
         <UserStatus users={dashboardData.users} />
       </div>

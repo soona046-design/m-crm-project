@@ -70,31 +70,43 @@ function LoginForm() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          MCRM Admin
-        </Typography>
-        <Paper
+    // TDS: 화이트 캔버스 + 단일 primary CTA — 로그인은 카드 없이 평면 화면으로
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#FFFFFF',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        px: '24px', // screen gutter
+      }}
+    >
+      <Container component="main" maxWidth="xs" disableGutters>
+        <Box
           component="form"
           onSubmit={handleSubmit}
           sx={{
-            mt: 3,
-            p: 3,
-            width: '100%',
+            pt: { xs: 10, sm: 14 },
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
           }}
         >
+          {/* 헤드라인 — 해요체, 좌측 정렬 */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600, letterSpacing: 0 }}>
+              MCRM
+            </Typography>
+            <Typography variant="h2" component="h1" sx={{ mt: 1, color: 'text.primary' }}>
+              다시 만나서 반가워요
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1, color: 'text.secondary' }}>
+              아이디와 비밀번호를 입력해 주세요
+            </Typography>
+          </Box>
+
           {error && <Alert severity="error">{error}</Alert>}
+
           <TextField
             required
             fullWidth
@@ -119,18 +131,21 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
           />
+
+          {/* XL primary CTA — 화면당 하나, 버튼은 일어날 일을 직접 말한다 */}
           <Button
             type="submit"
             fullWidth
             variant="contained"
+            size="large"
             disabled={loading}
             sx={{ mt: 2 }}
           >
-            {loading ? <CircularProgress size={24} /> : '로그인'}
+            {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : '로그인하기'}
           </Button>
-        </Paper>
-      </Box>
-    </Container>
+        </Box>
+      </Container>
+    </Box>
   );
 }
 

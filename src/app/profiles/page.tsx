@@ -31,7 +31,7 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  clinic_id?: string;
+  clinic_id?: string | null; // 지점 미배정 사용자는 null
   phone?: string;
   department?: string;
   join_date?: string;

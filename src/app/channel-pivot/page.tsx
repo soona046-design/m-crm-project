@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent, Chip, TextField, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Checkbox } from '@mui/material';
+import PageHeader from '@/components/PageHeader';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -65,7 +66,7 @@ interface ChannelDetailData {
 interface CategoryPerformanceData {
   category_code: string; // 'online', 'offline', 'db'
   category_name: string; // '온라인', '오프라인', 'DB'
-  category_color: string; // '#2196F3', '#FF9800', '#4CAF50'
+  category_color: string; // '#7DADFF', '#FFBD69', '#222222'
   impressions: number;
   clicks: number;
   ctr: number; // 클릭률
@@ -89,7 +90,7 @@ interface PivotTableData {
   campaign: string;
   category_code?: string; // 'online', 'offline', 'db'
   category_name?: string; // '온라인', '오프라인', 'DB'
-  category_color?: string; // '#2196F3', '#FF9800', '#4CAF50'
+  category_color?: string; // '#7DADFF', '#FFBD69', '#222222'
   year: number;
   month: number;
   week: number;
@@ -132,7 +133,7 @@ interface MonthlyData {
 }
 
 interface WeekData {
-  weekNumber: number; // 1~5 (해당 월의 몇번째 주)
+  weekNumber: number; // 1~6 (해당 월의 몇번째 주, 일요일~토요일 기준)
   weekLabel: string; // "첫번째주", "두번째주"...
   dateRange: string; // "11/1-11/7"
   campaigns: CampaignData[];
@@ -189,23 +190,29 @@ const getCategoryForChannel = (channel: string): { code: string; name: string; c
   // 온라인 채널
   const onlineKeywords = ['google', 'naver', 'facebook', 'instagram', 'youtube', 'kakao', 'meta', 'ads', '광고', '검색', 'sns', 'social'];
   if (onlineKeywords.some(keyword => channelLower.includes(keyword))) {
-    return { code: 'online', name: '온라인', color: '#2196F3' };
+    return { code: 'online', name: '온라인', color: '#3182F6' };
   }
 
   // 오프라인 채널
   const offlineKeywords = ['전단', '현수막', '간판', '포스터', '전화', '방문', '오프라인', '지역', '매장'];
   if (offlineKeywords.some(keyword => channelLower.includes(keyword))) {
-    return { code: 'offline', name: '오프라인', color: '#FF9800' };
+    return { code: 'offline', name: '오프라인', color: '#8B95A1' };
   }
 
   // DB 채널
   const dbKeywords = ['db', '데이터베이스', '기존고객', '재방문', '추천', '소개'];
   if (dbKeywords.some(keyword => channelLower.includes(keyword))) {
-    return { code: 'db', name: 'DB', color: '#4CAF50' };
+    return { code: 'db', name: 'DB', color: '#222222' };
   }
 
   // 기본값: 온라인으로 분류
-  return { code: 'online', name: '온라인', color: '#2196F3' };
+  return { code: 'online', name: '온라인', color: '#3182F6' };
+};
+
+// 일요일~토요일을 한 주로 보는 월 내 주차 (1일이 속한 주가 1주차, 최대 6주차)
+const getWeekOfMonth = (date: Date): number => {
+  const firstDayOffset = new Date(date.getFullYear(), date.getMonth(), 1).getDay(); // 0=일요일
+  return Math.ceil((date.getDate() + firstDayOffset) / 7);
 };
 
 export default function ChannelPivotDashboardPage() {
@@ -414,10 +421,12 @@ export default function ChannelPivotDashboardPage() {
     return `${weekNumber}주차`;
   };
 
-  // 날짜 범위 계산 헬퍼 함수
+  // 날짜 범위 계산 헬퍼 함수 (일요일~토요일을 한 주로 계산)
   const getDateRange = (year: number, month: number, weekNumber: number): string => {
-    const startDay = (weekNumber - 1) * 7 + 1;
-    const endDay = Math.min(weekNumber * 7, new Date(year, month, 0).getDate());
+    const firstDayOffset = new Date(year, month - 1, 1).getDay(); // 0=일요일
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const startDay = Math.max(1, (weekNumber - 1) * 7 - firstDayOffset + 1);
+    const endDay = Math.min(weekNumber * 7 - firstDayOffset, daysInMonth);
     return `${month}/${startDay}-${month}/${endDay}`;
   };
 
@@ -741,10 +750,7 @@ export default function ChannelPivotDashboardPage() {
     const startDate = new Date(newCampaign.startDate);
     const year = startDate.getFullYear();
     const month = startDate.getMonth() + 1;
-    const day = startDate.getDate();
-
-    // 월 내부 주차 계산 (1-7일: 1주차, 8-14일: 2주차, ...)
-    const week = Math.ceil(day / 7);
+    const week = getWeekOfMonth(startDate);
 
     // 채널 카테고리 자동 매핑
     const category = getCategoryForChannel(newCampaign.channel);
@@ -913,8 +919,7 @@ export default function ChannelPivotDashboardPage() {
           const startDate = new Date(startDateStr);
           const year = startDate.getFullYear();
           const month = startDate.getMonth() + 1;
-          const day = startDate.getDate();
-          const week = Math.ceil(day / 7);
+          const week = getWeekOfMonth(startDate);
 
           const impressions = Number(row.impressions) || 0;
           const clicks = Number(row.clicks) || 0;
@@ -1025,9 +1030,10 @@ export default function ChannelPivotDashboardPage() {
             id: item.id || `backend_${index}`,
             channel: item.channel || '알 수 없음',
             campaign: item.campaign || '알 수 없음',
-            year: now.getFullYear(),
-            month: now.getMonth() + 1,
-            week: Math.ceil(now.getDate() / 7), // 현재 날짜 기준 주차
+            // 백엔드가 주(일~토) 단위로 분할해서 내려주는 값. 없으면 현재 날짜 기준으로 폴백
+            year: item.year ?? now.getFullYear(),
+            month: item.month ?? now.getMonth() + 1,
+            week: item.week ?? getWeekOfMonth(now),
             impressions: item.impressions || 0,
             clicks: item.clicks || 0,
             ctr: item.ctr || 0,
@@ -1183,30 +1189,26 @@ export default function ChannelPivotDashboardPage() {
     return value.toLocaleString();
   };
 
-  // 파이 차트 색상
-  const COLORS = ['#1E88E5', '#00897B', '#FFC107', '#E53935', '#9C27B0'];
+  // 차트 색상 — TDS 팔레트 (Toss Blue 강조 + cool-grey 램프)
+  const COLORS = ['#3182F6', '#8B95A1', '#B0B8C1', '#191F28', '#D1D6DB'];
 
+  // ROI 색상 — TDS: 좋음=grey-900, 보통=grey-600, 나쁨=red-500(danger)
   const getROIColor = (roi: number | undefined) => {
-    if (roi === undefined || roi === null || isNaN(roi)) return '#9e9e9e'; // 회색
-    if (roi >= 100) return '#4caf50'; // 녹색
-    if (roi >= 50) return '#ff9800'; // 주황
-    return '#f44336'; // 빨강
+    if (roi === undefined || roi === null || isNaN(roi)) return 'var(--grey-500)';
+    if (roi >= 100) return 'var(--grey-900)';
+    if (roi >= 50) return 'var(--grey-600)';
+    return 'var(--red-500)';
   };
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        채널별 ROI 분석 대시보드
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
-        광고 비용, 리드 유입량, 전환율을 기반으로 채널별 ROI를 측정합니다
-      </Typography>
+    <Box sx={{ flexGrow: 1, p: { xs: 0, md: 1 } }}>
+      <PageHeader title="채널별 ROI 분석" />
 
       {/* 날짜 범위 선택 UI */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
+      <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: '12px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CalendarTodayIcon sx={{ color: '#1976d2' }} />
+            <CalendarTodayIcon sx={{ color: 'var(--gray-900)' }} />
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               조회 기간
             </Typography>
@@ -1289,7 +1291,7 @@ export default function ChannelPivotDashboardPage() {
       </Paper>
 
       {/* 탭 네비게이션 */}
-      <Paper sx={{ mb: 3 }}>
+      <Paper variant="outlined" sx={{ mb: 2, borderRadius: '12px' }}>
         <Tabs
           value={currentTab}
           onChange={(e, newValue) => setCurrentTab(newValue)}
@@ -1309,9 +1311,9 @@ export default function ChannelPivotDashboardPage() {
 
       {/* 탭 0: 대시보드 */}
       {!loading && !error && currentTab === 0 && (
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {/* 요약 지표 카드 */}
-          <Grid item xs={12} md={3}>
+          <Grid item xs={6} md={3}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1323,13 +1325,13 @@ export default function ChannelPivotDashboardPage() {
                       {formatCurrency(summaryMetrics.totalCost)}
                     </Typography>
                   </Box>
-                  <AttachMoneyIcon sx={{ fontSize: 40, color: '#e53935' }} />
+                  <AttachMoneyIcon sx={{ fontSize: 40, color: 'var(--red-500)' }} />
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={6} md={3}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1341,13 +1343,13 @@ export default function ChannelPivotDashboardPage() {
                       {formatCurrency(summaryMetrics.totalRevenue)}
                     </Typography>
                   </Box>
-                  <AttachMoneyIcon sx={{ fontSize: 40, color: '#4caf50' }} />
+                  <AttachMoneyIcon sx={{ fontSize: 40, color: 'var(--gray-900)' }} />
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={6} md={3}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1360,16 +1362,16 @@ export default function ChannelPivotDashboardPage() {
                     </Typography>
                   </Box>
                   {summaryMetrics.averageROI >= 0 ? (
-                    <TrendingUpIcon sx={{ fontSize: 40, color: '#4caf50' }} />
+                    <TrendingUpIcon sx={{ fontSize: 40, color: 'var(--gray-900)' }} />
                   ) : (
-                    <TrendingDownIcon sx={{ fontSize: 40, color: '#f44336' }} />
+                    <TrendingDownIcon sx={{ fontSize: 40, color: 'var(--red-500)' }} />
                   )}
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={6} md={3}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1381,7 +1383,7 @@ export default function ChannelPivotDashboardPage() {
                       {formatPercentage(summaryMetrics.averageConversionRate)}
                     </Typography>
                   </Box>
-                  <EventAvailableIcon sx={{ fontSize: 40, color: '#1e88e5' }} />
+                  <EventAvailableIcon sx={{ fontSize: 40, color: 'var(--gray-900)' }} />
                 </Box>
               </CardContent>
             </Card>
@@ -1401,7 +1403,7 @@ export default function ChannelPivotDashboardPage() {
                     sx={{
                       p: 2,
                       cursor: 'pointer',
-                      '&:hover': { bgcolor: '#f5f5f5' },
+                      '&:hover': { bgcolor: 'var(--grey-100)' },
                       transition: 'background-color 0.2s',
                     }}
                   >
@@ -1481,9 +1483,9 @@ export default function ChannelPivotDashboardPage() {
                   <Collapse in={expandedCategories.has(category.category_code)}>
                     {category.channels && category.channels.length > 0 ? (
                       <TableContainer sx={{ maxHeight: 400 }}>
-                        <Table size="small">
+                        <Table size="small" sx={{ minWidth: 860 }}>
                           <TableHead>
-                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableRow sx={{ bgcolor: 'var(--grey-100)' }}>
                               <TableCell sx={{ fontWeight: 'bold' }}>채널</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>노출수</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>클릭수</TableCell>
@@ -1516,7 +1518,7 @@ export default function ChannelPivotDashboardPage() {
                                 <TableCell align="right">{formatNumber(channel.contracts)}</TableCell>
                                 <TableCell align="right">{formatPercentage(channel.conversionRate)}</TableCell>
                                 <TableCell align="right">{formatCurrency(channel.cost)}</TableCell>
-                                <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                                <TableCell align="right" sx={{ color: 'var(--gray-900)', fontWeight: 'bold' }}>
                                   {formatCurrency(channel.revenue)}
                                 </TableCell>
                                 <TableCell align="right">{formatCurrency(channel.cpa)}</TableCell>
@@ -1525,7 +1527,7 @@ export default function ChannelPivotDashboardPage() {
                                     label={formatPercentage(channel.roi)}
                                     size="small"
                                     sx={{
-                                      bgcolor: channel.roi >= 100 ? '#e8f5e9' : channel.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                      bgcolor: channel.roi >= 100 ? 'var(--gray-150)' : channel.roi >= 50 ? 'var(--grey-100)' : 'var(--grey-100)',
                                       color: getROIColor(channel.roi),
                                       fontWeight: 'bold',
                                     }}
@@ -1549,7 +1551,7 @@ export default function ChannelPivotDashboardPage() {
 
           {/* 카테고리별 ROI 비교 막대 차트 */}
           <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3, height: 400 }}>
+            <Paper sx={{ p: { xs: 2, md: 3 }, height: 400 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                 <Box>
                   <Typography variant="h6" gutterBottom>카테고리별 ROI 비교 (온라인/오프라인/DB)</Typography>
@@ -1576,10 +1578,10 @@ export default function ChannelPivotDashboardPage() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="leads" fill="#2196F3" name="문의" />
-                    <Bar dataKey="tickets" fill="#FF9800" name="상담" />
-                    <Bar dataKey="appointments" fill="#4CAF50" name="예약" />
-                    <Bar dataKey="contracts" fill="#9C27B0" name="계약" />
+                    <Bar dataKey="leads" fill="#3182F6" name="문의" />
+                    <Bar dataKey="tickets" fill="#8B95A1" name="상담" />
+                    <Bar dataKey="appointments" fill="#B0B8C1" name="예약" />
+                    <Bar dataKey="contracts" fill="#191F28" name="계약" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -1590,7 +1592,7 @@ export default function ChannelPivotDashboardPage() {
 
           {/* 카테고리별 문의 비율 파이 차트 */}
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, height: 400 }}>
+            <Paper sx={{ p: { xs: 2, md: 3 }, height: 400 }}>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="h6" gutterBottom>카테고리별 문의 분포</Typography>
                 {startDate && endDate && (
@@ -1627,7 +1629,7 @@ export default function ChannelPivotDashboardPage() {
 
           {/* 비용 vs 수익 비교 */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 3, height: 400 }}>
+            <Paper sx={{ p: { xs: 2, md: 3 }, height: 400 }}>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="h6" gutterBottom>채널별 비용 vs 수익</Typography>
                 {startDate && endDate && (
@@ -1653,8 +1655,8 @@ export default function ChannelPivotDashboardPage() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="cost" fill="#e53935" name="비용" />
-                    <Bar dataKey="revenue" fill="#4caf50" name="수익" />
+                    <Bar dataKey="cost" fill="#8B95A1" name="비용" />
+                    <Bar dataKey="revenue" fill="#3182F6" name="수익" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -1678,11 +1680,11 @@ export default function ChannelPivotDashboardPage() {
                   if (channelsInCategory.length === 0) return null;
 
                   const categoryName = channelsInCategory[0]?.category_name || '분류 안 됨';
-                  const categoryColor = channelsInCategory[0]?.category_color || '#9E9E9E';
+                  const categoryColor = channelsInCategory[0]?.category_color || '#999999';
 
                   return (
                     <Paper key={categoryCode || 'uncategorized'} sx={{ mb: 2, borderLeft: `4px solid ${categoryColor}` }}>
-                      <Box sx={{ p: 2, bgcolor: '#fafafa' }}>
+                      <Box sx={{ p: 2, bgcolor: 'var(--grey-100)' }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box
                             sx={{
@@ -1696,9 +1698,9 @@ export default function ChannelPivotDashboardPage() {
                         </Typography>
                       </Box>
                       <TableContainer>
-                        <Table size="small">
+                        <Table size="small" sx={{ minWidth: 860 }}>
                           <TableHead>
-                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableRow sx={{ bgcolor: 'var(--grey-100)' }}>
                               <TableCell><strong>채널</strong></TableCell>
                               <TableCell align="right"><strong>문의 수</strong></TableCell>
                               <TableCell align="right"><strong>예약 수</strong></TableCell>
@@ -1719,7 +1721,7 @@ export default function ChannelPivotDashboardPage() {
                                 <TableCell align="right">{formatNumber(row.appointments)}</TableCell>
                                 <TableCell align="right">{formatPercentage(row.conversionRate)}</TableCell>
                                 <TableCell align="right">{formatCurrency(row.cost)}</TableCell>
-                                <TableCell align="right" sx={{ color: '#4caf50', fontWeight: 600 }}>
+                                <TableCell align="right" sx={{ color: 'var(--gray-900)', fontWeight: 600 }}>
                                   {formatCurrency(row.revenue)}
                                 </TableCell>
                                 <TableCell align="right">{formatCurrency(row.cpl)}</TableCell>
@@ -1729,7 +1731,7 @@ export default function ChannelPivotDashboardPage() {
                                     label={formatPercentage(row.roi)}
                                     size="small"
                                     sx={{
-                                      backgroundColor: row.roi >= 100 ? '#e8f5e9' : row.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                      backgroundColor: row.roi >= 100 ? 'var(--gray-150)' : row.roi >= 50 ? 'var(--grey-100)' : 'var(--grey-100)',
                                       color: getROIColor(row.roi),
                                       fontWeight: 600,
                                     }}
@@ -1809,7 +1811,7 @@ export default function ChannelPivotDashboardPage() {
               </Box>
               {monthlyData.length > 0 ? (
                 <TableContainer sx={{ maxHeight: 600 }}>
-                  <Table size="small" stickyHeader>
+                  <Table size="small" stickyHeader sx={{ minWidth: 1080 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell width={50}></TableCell>
@@ -1844,9 +1846,9 @@ export default function ChannelPivotDashboardPage() {
                           <TableRow
                             hover
                             sx={{
-                              backgroundColor: '#e3f2fd',
+                              backgroundColor: 'var(--gray-150)',
                               cursor: 'pointer',
-                              '&:hover': { backgroundColor: '#bbdefb' }
+                              '&:hover': { backgroundColor: 'var(--gray-200)' }
                             }}
                             onClick={() => toggleMonth(monthRow.yearMonth)}
                           >
@@ -1888,9 +1890,9 @@ export default function ChannelPivotDashboardPage() {
                                 <TableRow
                                   hover
                                   sx={{
-                                    backgroundColor: '#f5f5f5',
+                                    backgroundColor: 'var(--grey-100)',
                                     cursor: 'pointer',
-                                    '&:hover': { backgroundColor: '#eeeeee' }
+                                    '&:hover': { backgroundColor: 'var(--gray-150)' }
                                   }}
                                   onClick={() => toggleWeek(weekKey)}
                                 >
@@ -1931,7 +1933,7 @@ export default function ChannelPivotDashboardPage() {
                                   const isApiData = campaign.source === 'api';
 
                                   return (
-                                    <TableRow key={campaign.id} hover sx={{ backgroundColor: '#fafafa' }}>
+                                    <TableRow key={campaign.id} hover sx={{ backgroundColor: 'var(--grey-100)' }}>
                                       <TableCell></TableCell>
                                       <TableCell padding="checkbox">
                                         <Checkbox
@@ -1960,7 +1962,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'impressions', campaign.impressions, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'impressions' ? (
@@ -1998,7 +2000,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'clicks', campaign.clicks, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'clicks' ? (
@@ -2040,7 +2042,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'leads', campaign.leads, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'leads' ? (
@@ -2078,7 +2080,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'appointments', campaign.appointments, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'appointments' ? (
@@ -2116,7 +2118,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'cost', campaign.cost, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'cost' ? (
@@ -2154,7 +2156,7 @@ export default function ChannelPivotDashboardPage() {
                                         onClick={() => isEditable && handleCellClick(campaign.id, 'revenue', campaign.revenue, campaign.source)}
                                         sx={{
                                           cursor: isEditable ? 'pointer' : 'default',
-                                          '&:hover': isEditable ? { backgroundColor: '#f0f0f0' } : {}
+                                          '&:hover': isEditable ? { backgroundColor: 'var(--gray-150)' } : {}
                                         }}
                                       >
                                         {editingCell?.id === campaign.id && editingCell?.field === 'revenue' ? (
@@ -2197,7 +2199,7 @@ export default function ChannelPivotDashboardPage() {
                                           label={formatPercentage(campaign.roi)}
                                           size="small"
                                           sx={{
-                                            bgcolor: campaign.roi >= 100 ? '#e8f5e9' : campaign.roi >= 50 ? '#fff3e0' : '#ffebee',
+                                            bgcolor: campaign.roi >= 100 ? 'var(--gray-150)' : campaign.roi >= 50 ? 'var(--grey-100)' : 'var(--grey-100)',
                                             color: getROIColor(campaign.roi),
                                             fontWeight: 'bold',
                                           }}
@@ -2213,7 +2215,7 @@ export default function ChannelPivotDashboardPage() {
                                               e.stopPropagation();
                                               handleDeleteCampaign(campaign.id);
                                             }}
-                                            sx={{ color: '#f44336' }}
+                                            sx={{ color: 'var(--red-500)' }}
                                           >
                                             <DeleteIcon fontSize="small" />
                                           </IconButton>

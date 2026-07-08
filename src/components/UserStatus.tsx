@@ -18,45 +18,50 @@ interface UserStatusProps {
 
 export function UserStatus({ users }: UserStatusProps) {
   return (
-    <Card className="border border-border/50 shadow-md">
-      <CardHeader className="pb-3">
+    // TDS: 평면 흰 카드 + 헤어라인, radius 16
+    <Card className="rounded-2xl border border-border bg-card shadow-none">
+      <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">사용자 현황</CardTitle>
-          <Badge variant="secondary" className="gap-1 shadow-sm">
+          <CardTitle className="text-[15px] font-semibold tracking-[-0.005em]">사용자 현황</CardTitle>
+          {/* brand chip: blue-50 배경 + Toss Blue */}
+          <Badge className="gap-1 rounded-full border-0 bg-[#E8F3FF] text-[#3182F6] shadow-none hover:bg-[#E8F3FF]">
             <Users className="h-3 w-3" />
             {users.length}명
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-0.5 px-4 pb-4">
         {users.length > 0 ? (
           users.map((user) => (
+            // TDS list-row: 행 보더 없이 hover 배경, 44px 아바타 + 타이틀/서브 + 우측 슬롯
             <div
               key={user.user_id}
-              className="flex items-center justify-between p-3 rounded-lg border border-border/70 hover:bg-muted/50 hover:border-border transition-all duration-200 shadow-sm"
+              className="flex items-center justify-between rounded-xl p-3 hover:bg-muted transition-colors duration-200"
             >
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">{user.name[0]}</AvatarFallback>
+              <div className="flex items-center gap-3.5">
+                <Avatar className="h-11 w-11 rounded-[14px]">
+                  <AvatarFallback className="rounded-[14px] bg-[#E8F3FF] text-[#3182F6] font-semibold">
+                    {user.name[0]}
+                  </AvatarFallback>
                 </Avatar>
 
                 <div>
-                  <h4 className="font-semibold text-sm">{user.name}</h4>
-                  <p className="text-xs text-muted-foreground">{user.login_id} | {user.email}</p>
+                  <h4 className="font-semibold text-[15px] tracking-[-0.005em]">{user.name}</h4>
+                  <p className="text-[13px] text-muted-foreground">{user.login_id} · {user.email}</p>
                 </div>
               </div>
 
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs rounded-full">
                 {user.role}
               </Badge>
             </div>
           ))
         ) : (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="rounded-full bg-muted/70 p-4 mb-4">
+            <div className="rounded-full bg-muted p-4 mb-4">
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground text-center font-medium">등록된 사용자가 없습니다</p>
+            <p className="text-[15px] text-foreground text-center font-medium">아직 등록된 사용자가 없어요</p>
           </div>
         )}
       </CardContent>

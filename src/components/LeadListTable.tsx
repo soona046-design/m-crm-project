@@ -250,13 +250,12 @@ export default function LeadListTable({
   const getStatusChipColor = (status: string) => {
     switch (status) {
       case '상담완료':
-        return 'primary';
       case '예약완료':
-        return 'secondary';
+        return 'primary'; // 진행 단계 — Toss Blue
       case '계약완료':
         return 'success';
-      case '보류':
-        return 'warning';
+      case '거절':
+        return 'error';
       default:
         return 'default';
     }
@@ -469,8 +468,9 @@ export default function LeadListTable({
   };
 
   return (
-    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', p: 2 }}>
+    // TDS: 평면 흰 카드 + 1px 헤어라인 (그림자 없음)
+    <Paper variant="outlined" sx={{ width: '100%', overflow: 'hidden', borderRadius: '16px' }}>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', p: 2, gap: 1, flexWrap: 'wrap' }}>
         <TextField
           variant="outlined"
           size="small"
@@ -516,8 +516,8 @@ export default function LeadListTable({
           </Button>
         </Box>
       </Toolbar>
-      <TableContainer sx={{ maxHeight: 600 }}>
-        <Table stickyHeader aria-label="leads table">
+      <TableContainer sx={{ maxHeight: 600 }} className="scroll-x">
+        <Table stickyHeader aria-label="leads table" sx={{ minWidth: 820 }}>
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox">
@@ -534,12 +534,15 @@ export default function LeadListTable({
           <TableBody>
             {leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} sx={{ textAlign: 'center', py: 5 }}> {/* 8개 열: 체크박스, 날짜, 채널, 업체명, 문의서비스, 상태, 담당자, 액션 */}
-                  <Typography variant="h6" color="text.secondary">
-                    문의가 없습니다.
+                <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6, borderBottom: 'none' }}> {/* 8개 열: 체크박스, 날짜, 채널, 업체명, 문의서비스, 상태, 담당자, 액션 */}
+                  <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    조건에 맞는 문의가 없어요
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                    필터를 바꾸면 다른 문의를 볼 수 있어요
                   </Typography>
                   <Button variant="outlined" sx={{ mt: 2 }} onClick={() => onFilterClick()}> {/* 필터 초기화 버튼 클릭 시 필터 드로어 열도록 변경 */}
-                    필터 초기화
+                    필터 바꾸기
                   </Button>
                 </TableCell>
               </TableRow>
@@ -643,26 +646,27 @@ export default function LeadListTable({
                             },
                             '& .MuiSelect-select': {
                               py: 0.5,
-                              px: 1,
-                              borderRadius: '16px',
-                              fontSize: '0.8125rem',
+                              px: 1.25,
+                              borderRadius: '999px', // TDS: 상태 칩은 full pill
+                              fontSize: '13px',
+                              // TDS 시맨틱: 진행 단계는 blue-50/Toss Blue, 완료는 green, 보류는 grey, 거절은 washed red
                               backgroundColor:
-                                lead.status === '신규' ? '#fff3e0' :
-                                lead.status === '상담완료' ? '#e3f2fd' :
-                                lead.status === '예약완료' ? '#f5f5f5' :
-                                lead.status === '계약완료' ? '#e8f5e9' :
-                                lead.status === '보류' ? '#fff9c4' :
-                                lead.status === '거절' ? '#ffebee' :
-                                '#fff3e0',
+                                lead.status === '신규' ? 'var(--blue-50)' :
+                                lead.status === '상담완료' ? 'var(--blue-50)' :
+                                lead.status === '예약완료' ? 'var(--blue-50)' :
+                                lead.status === '계약완료' ? '#E5F5EE' :
+                                lead.status === '보류' ? 'var(--grey-100)' :
+                                lead.status === '거절' ? '#FDEBEC' :
+                                'var(--grey-100)',
                               color:
-                                lead.status === '신규' ? '#f57c00' :
-                                lead.status === '상담완료' ? '#1976d2' :
-                                lead.status === '예약완료' ? '#616161' :
-                                lead.status === '계약완료' ? '#388e3c' :
-                                lead.status === '보류' ? '#f9a825' :
-                                lead.status === '거절' ? '#d32f2f' :
-                                '#f57c00',
-                              fontWeight: 500,
+                                lead.status === '신규' ? 'var(--blue-500)' :
+                                lead.status === '상담완료' ? 'var(--blue-500)' :
+                                lead.status === '예약완료' ? 'var(--blue-500)' :
+                                lead.status === '계약완료' ? 'var(--green-500)' :
+                                lead.status === '보류' ? 'var(--grey-600)' :
+                                lead.status === '거절' ? 'var(--red-500)' :
+                                'var(--grey-600)',
+                              fontWeight: 600,
                             }
                           }}
                         >

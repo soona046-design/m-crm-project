@@ -277,10 +277,10 @@ export default function AgentPerformanceDashboardPage() {
         <Grid container spacing={3}>
           {/* Top KPI Cards */}
           <Grid item xs={12} sm={6} md={3}>
-            <KpiCard title="평균 응답속도" value={formatDuration(avgResponseTime)} icon={<AccessTimeIcon />} color="#1E88E5" />
+            <KpiCard title="평균 응답속도" value={formatDuration(avgResponseTime)} icon={<AccessTimeIcon />} color="#7DADFF" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <KpiCard title="평균 내원 전환율" value={formatPercentage(avgConversionRate)} icon={<TrendingUpIcon />} color="#4CAF50" />
+            <KpiCard title="평균 내원 전환율" value={formatPercentage(avgConversionRate)} icon={<TrendingUpIcon />} color="#222222" />
           </Grid>
           {/* [SLA 기능 비활성화 2026-06-22]
           <Grid item xs={12} sm={6} md={3}>

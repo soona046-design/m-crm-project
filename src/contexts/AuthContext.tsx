@@ -9,7 +9,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  clinic_id?: string;
+  clinic_id?: string | null; // 지점 미배정 사용자는 null
 }
 
 interface AuthContextType {

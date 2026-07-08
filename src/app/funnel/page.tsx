@@ -217,7 +217,7 @@ export default function FunnelDashboardPage() {
         totalTickets, totalAppointments, totalContracts, totalRevenue
       });
 
-      const colors = ['#9E9E9E', '#757575', '#1E88E5', '#2196F3', '#42A5F5', '#4CAF50'];
+      const colors = ['#999999', '#666666', '#7DADFF', '#7DADFF', '#7DADFF', '#222222'];
       const funnel: FunnelData[] = [
         {
           stage: '노출',
@@ -370,22 +370,22 @@ export default function FunnelDashboardPage() {
       <Grid container spacing={3} mb={3}>
         {/* KPI Cards */}
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="노출" value={kpiData.impressions.toLocaleString()} icon={<VisibilityIcon />} color="#9E9E9E" />
+          <KpiCard title="노출" value={kpiData.impressions.toLocaleString()} icon={<VisibilityIcon />} color="#999999" />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="클릭" value={kpiData.clicks.toLocaleString()} icon={<MouseIcon />} color="#757575" />
+          <KpiCard title="클릭" value={kpiData.clicks.toLocaleString()} icon={<MouseIcon />} color="#666666" />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="문의" value={kpiData.leads.toLocaleString()} icon={<PeopleIcon />} color="#1E88E5" />
+          <KpiCard title="문의" value={kpiData.leads.toLocaleString()} icon={<PeopleIcon />} color="#7DADFF" />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="상담" value={kpiData.tickets.toLocaleString()} icon={<PhoneIcon />} color="#2196F3" />
+          <KpiCard title="상담" value={kpiData.tickets.toLocaleString()} icon={<PhoneIcon />} color="#7DADFF" />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="예약" value={kpiData.appointments.toLocaleString()} icon={<CalendarMonthIcon />} color="#42A5F5" />
+          <KpiCard title="예약" value={kpiData.appointments.toLocaleString()} icon={<CalendarMonthIcon />} color="#7DADFF" />
         </Grid>
         <Grid item xs={12} sm={6} md={2}>
-          <KpiCard title="계약" value={kpiData.contracts.toLocaleString()} icon={<CheckCircleOutlineIcon />} color="#4CAF50" />
+          <KpiCard title="계약" value={kpiData.contracts.toLocaleString()} icon={<CheckCircleOutlineIcon />} color="#222222" />
         </Grid>
       </Grid>
 
@@ -498,7 +498,7 @@ export default function FunnelDashboardPage() {
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: '#F6F6F6' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>채널</TableCell>
                     {[
                       { key: 'impressions', label: '노출', desc: '광고 노출 수' },
@@ -537,7 +537,7 @@ export default function FunnelDashboardPage() {
                       return sortConfig.dir === 'desc' ? vb - va : va - vb;
                     })
                     .map((ch, idx) => (
-                      <TableRow key={ch.channel} sx={{ '&:hover': { backgroundColor: '#fafafa' }, backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <TableRow key={ch.channel} sx={{ '&:hover': { backgroundColor: '#F6F6F6' }, backgroundColor: idx % 2 === 0 ? 'white' : '#F6F6F6' }}>
                         <TableCell>
                           <Typography variant="body2" fontWeight="bold">{ch.channel}</Typography>
                         </TableCell>
@@ -546,12 +546,12 @@ export default function FunnelDashboardPage() {
                         <TableCell align="right">{ch.leads > 0 ? ch.leads.toLocaleString() : '—'}</TableCell>
                         <TableCell align="right">
                           {ch.ctr !== null
-                            ? <Chip label={`${ch.ctr.toFixed(2)}%`} size="small" sx={{ backgroundColor: ch.ctr >= 3 ? '#e8f5e9' : ch.ctr >= 1 ? '#fff3e0' : '#ffebee', fontSize: '0.75rem' }} />
+                            ? <Chip label={`${ch.ctr.toFixed(2)}%`} size="small" sx={{ backgroundColor: ch.ctr >= 3 ? '#F1F1F1' : ch.ctr >= 1 ? '#F6F6F6' : '#F6F6F6', fontSize: '0.75rem' }} />
                             : '—'}
                         </TableCell>
                         <TableCell align="right">
                           {ch.cvr !== null
-                            ? <Chip label={`${ch.cvr.toFixed(2)}%`} size="small" sx={{ backgroundColor: ch.cvr >= 5 ? '#e8f5e9' : ch.cvr >= 2 ? '#fff3e0' : '#ffebee', fontSize: '0.75rem' }} />
+                            ? <Chip label={`${ch.cvr.toFixed(2)}%`} size="small" sx={{ backgroundColor: ch.cvr >= 5 ? '#F1F1F1' : ch.cvr >= 2 ? '#F6F6F6' : '#F6F6F6', fontSize: '0.75rem' }} />
                             : '—'}
                         </TableCell>
                         <TableCell align="right">{ch.cost > 0 ? `₩${ch.cost.toLocaleString()}` : '—'}</TableCell>
@@ -561,13 +561,13 @@ export default function FunnelDashboardPage() {
                         <TableCell align="right">{ch.revenue > 0 ? `₩${ch.revenue.toLocaleString()}` : '—'}</TableCell>
                         <TableCell align="right">
                           {ch.roas !== null
-                            ? <Chip label={`${ch.roas.toFixed(0)}%`} size="small" sx={{ backgroundColor: ch.roas >= 300 ? '#e8f5e9' : ch.roas >= 100 ? '#fff3e0' : '#ffebee', color: ch.roas >= 300 ? '#2e7d32' : ch.roas >= 100 ? '#e65100' : '#c62828', fontWeight: 'bold', fontSize: '0.75rem' }} />
+                            ? <Chip label={`${ch.roas.toFixed(0)}%`} size="small" sx={{ backgroundColor: ch.roas >= 300 ? '#F1F1F1' : ch.roas >= 100 ? '#F6F6F6' : '#F6F6F6', color: ch.roas >= 300 ? '#222222' : ch.roas >= 100 ? '#FF5B2C' : '#FF5B2C', fontWeight: 'bold', fontSize: '0.75rem' }} />
                             : '—'}
                         </TableCell>
                       </TableRow>
                     ))}
                   {/* 합계 행 */}
-                  <TableRow sx={{ backgroundColor: '#e3f2fd', fontWeight: 'bold' }}>
+                  <TableRow sx={{ backgroundColor: '#F1F1F1', fontWeight: 'bold' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>합계 / 평균</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>{kpiData.impressions.toLocaleString()}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>{kpiData.clicks.toLocaleString()}</TableCell>

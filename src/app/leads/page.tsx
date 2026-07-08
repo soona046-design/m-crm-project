@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
 import LeadListTable from '@/components/LeadListTable'; // LeadListTable 컴포넌트 import
+import PageHeader from '@/components/PageHeader';
 import LeadFilterDrawer from '@/components/LeadFilterDrawer'; // 필터 드로어 import
 import axios from 'axios'; // API 호출을 위해 axios import
 import api from '@/lib/axios'; // 채널 관리 API 호출용
@@ -863,13 +864,11 @@ export default function LeadsPage() {
   }, [newLead, fetchLeads, handleCloseAddLeadModal, page]);
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        문의 목록
-      </Typography>
+    <Box sx={{ flexGrow: 1, p: { xs: 0, md: 1 } }}>
+      <PageHeader title="문의 목록" />
 
-      {loading && <Typography>문의 불러오는 중...</Typography>}
-      {error && <Typography color="error">{error}</Typography>}
+      {loading && <Typography sx={{ color: 'text.secondary', mb: 1 }} variant="body2">문의를 불러오고 있어요…</Typography>}
+      {error && <Typography color="error" sx={{ mb: 1 }} variant="body2">{error}</Typography>}
 
       <LeadListTable
         leads={leads}

@@ -38,23 +38,23 @@ export function getPriorityInfo(priority: LeadPriority): PriorityInfo {
       return {
         priority,
         color: 'error',
-        backgroundColor: '#ffebee',
-        textColor: '#c62828',
+        backgroundColor: '#F6F6F6',
+        textColor: '#FF5B2C',
         description: '즉시 응대 필요 (스코어 86-100)'
       };
     case '매우 우선응대':
       return {
         priority,
         color: 'warning',
-        backgroundColor: '#fff3e0',
-        textColor: '#e65100',
+        backgroundColor: '#F6F6F6',
+        textColor: '#FF5B2C',
         description: '빠른 응대 필요 (스코어 71-85)'
       };
     case '우선 응대':
       return {
         priority,
         color: 'primary',
-        backgroundColor: '#e3f2fd',
+        backgroundColor: '#F1F1F1',
         textColor: '#1565c0',
         description: '우선 응대 권장 (스코어 51-70)'
       };
@@ -62,8 +62,8 @@ export function getPriorityInfo(priority: LeadPriority): PriorityInfo {
       return {
         priority,
         color: 'default',
-        backgroundColor: '#f5f5f5',
-        textColor: '#616161',
+        backgroundColor: '#F6F6F6',
+        textColor: '#666666',
         description: '일반 응대 (스코어 0-50)'
       };
   }

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Paper, Button, ButtonGroup, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Button, ButtonGroup, CircularProgress, Chip } from '@mui/material';
+import PageHeader from '@/components/PageHeader';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
@@ -22,6 +23,14 @@ interface Appointment {
   status: 'booked' | 'noshow' | 'done' | 'cancelled';
   reminder_sent: boolean;
 }
+
+// 예약 상태 영문 enum → 화면 표시용 한글 라벨
+const STATUS_LABEL: Record<Appointment['status'], string> = {
+  booked: '예약',
+  done: '완료',
+  noshow: '노쇼',
+  cancelled: '취소',
+};
 
 export default function AppointmentsPage() {
   const [view, setView] = useState<'week' | 'day'>('week'); // 주간/일간 뷰 전환
@@ -82,18 +91,23 @@ export default function AppointmentsPage() {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
         {getFilteredAppointments(date).length === 0 ? (
           <Box sx={{ width: '100%' }}>
-            <Typography variant="body2" color="text.secondary">예약이 없습니다.</Typography>
+            <Typography variant="body2" color="text.secondary">이 날은 예약이 없어요</Typography>
           </Box>
         ) : (
           getFilteredAppointments(date).map(apt => (
             <Box key={apt.apt_id} sx={{ flexBasis: { xs: '100%', sm: '45%', md: '30%' } }}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1">환자: {apt.lead_name || 'N/A'}</Typography>
-                <Typography variant="body2">시간: {dayjs(apt.slot_at).format('HH:mm')}</Typography>
-                <Typography variant="body2">의사: {apt.doctor_name || '미정'}</Typography>
-                <Typography variant="body2">상태: {apt.status}</Typography>
-                {apt.reminder_sent && <Typography variant="caption" color="text.secondary">리마인드 발송됨</Typography>}
-                <Button size="small" onClick={() => handleNoShow(apt.apt_id)} sx={{ mt: 1 }}>노쇼 처리</Button>
+              {/* TDS: 평면 헤어라인 카드 */}
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{apt.lead_name || '환자 미정'}</Typography>
+                <Typography variant="body2" color="text.secondary" className="tabular-nums">{dayjs(apt.slot_at).format('HH:mm')} · {apt.doctor_name || '담당 미정'}</Typography>
+                <Chip
+                  label={STATUS_LABEL[apt.status] ?? apt.status}
+                  size="small"
+                  color={apt.status === 'done' ? 'success' : apt.status === 'noshow' || apt.status === 'cancelled' ? 'error' : 'primary'}
+                  sx={{ alignSelf: 'flex-start', mt: 0.5 }}
+                />
+                {apt.reminder_sent && <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>리마인드 발송됨</Typography>}
+                <Button size="small" onClick={() => handleNoShow(apt.apt_id)} sx={{ mt: 1, alignSelf: 'flex-start' }}>노쇼 처리</Button>
               </Paper>
             </Box>
           ))
@@ -114,12 +128,10 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        예약 캘린더
-      </Typography>
+    <Box sx={{ flexGrow: 1, p: { xs: 0, md: 1 } }}>
+      <PageHeader title="예약 캘린더" />
 
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 2, borderRadius: '16px' }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-start' }}>
           <Box sx={{ flexBasis: { xs: '100%', md: '33%' } }}>
             <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
