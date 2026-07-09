@@ -1,15 +1,17 @@
 import { createTheme } from '@mui/material/styles';
 
 /**
- * Toss Design System (TDS) — MUI 테마
+ * Insight Design System — MUI 테마
+ * 출처: Insight-Design-System.md (Figma "대시보드 - 네이버 광고" 프레임 추출)
  *
  * 핵심 원칙:
- * - 화이트 캔버스 + cool-grey 뉴트럴 + 단일 강조색 Toss Blue #3182F6
- * - 화면당 하나의 primary CTA — 보조 액션은 grey-100 secondary 또는 ghost
- * - 평면 표면 + 1px grey-200 헤어라인 보더, 그림자는 floating/modal 전용
- * - 공격적 라운드: 카드 16~20, 버튼 사이즈별 10~16, 칩은 full pill
- * - 본문 15px / line-height 1.5 (한글 가독성 표준), 헤딩 Bold 700 타이트 트래킹
- * - pressed = 검정 26% overlay, disabled = 노드 전체 opacity 0.30
+ * - 화이트 캔버스(#F7F7F7 페이지) + 뉴트럴 + 단일 강조색 오렌지 #FF5B2C
+ * - primary 계열은 화면 시각 비중 30% 이내 — CTA 1개/활성 상태/핵심 KPI에만
+ * - 흰 텍스트 + #FF5B2C 배경은 대비 3.1:1 → 버튼 텍스트는 SemiBold 16px 이상,
+ *   hover/pressed는 #B2401F(600, 대비 5.76:1)
+ * - 평면 표면 + rgba(0,0,0,0.08) 헤어라인 보더, 그림자는 floating 전용
+ * - 라운드: 버튼/인풋/KPI 카드 8, 대형 카드 12, pill 999
+ * - 본문/테이블 15px, 섹션 타이틀 18px Bold, 버튼 16px SemiBold
  */
 
 const FONT_BASE = [
@@ -26,52 +28,51 @@ const FONT_BASE = [
   'sans-serif',
 ].join(',');
 
-// TDS 컬러 토큰
+// Insight 컬러 토큰
 const c = {
-  blue50: '#E8F3FF',
-  blue500: '#3182F6',
-  blue600: '#1B64DA',
-  blue700: '#1957C2',
-  grey900: '#191F28',
-  grey800: '#333D4B',
-  grey700: '#4E5968',
-  grey600: '#6B7684',
-  grey500: '#8B95A1',
-  grey400: '#B0B8C1',
-  grey300: '#D1D6DB',
-  grey200: '#E5E8EB',
-  grey150: '#EBEEF1',
-  grey100: '#F2F4F6',
-  grey50: '#F9FAFB',
+  primary50: '#FFF5F2',   // 보조 버튼(tint) 배경, 강조 카드 배경
+  primary500: '#FF5B2C',  // 주요 버튼, 링크, 활성 탭/메뉴 텍스트
+  primary600: '#B2401F',  // hover/pressed
+  primary700: '#8C3218',  // 옅은 배경 위 강조 텍스트/뱃지
+  textStrong: '#000000',  // 기본 본문
+  textHeading: '#2E2E2E', // 헤더/메뉴 텍스트
+  textMuted: '#737373',   // 보조 설명, 비활성 탭, placeholder
+  borderDefault: 'rgba(0,0,0,0.08)',
+  borderSubtle: 'rgba(0,0,0,0.10)',
+  borderTable: '#E5E5E5',
+  bgPage: '#F7F7F7',
+  bgSubtle: '#F8F9FA',
   white: '#FFFFFF',
-  red500: '#F04452',
+  dataRed: '#F4361E',
+  dataOrange: '#FD9A06',
+  dataBlue: '#2196F3',
   green500: '#00A05B',
-  orange500: '#FE9800',
+  greyDisabled: '#B5B5B5',
 };
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: c.blue500,        // Toss Blue — 화면당 하나의 primary CTA
-      dark: c.blue600,        // pressed
-      light: c.blue50,
+      main: c.primary500,     // Insight Orange — 화면당 하나의 primary CTA
+      dark: c.primary600,     // hover/pressed
+      light: c.primary50,
       contrastText: c.white,
     },
     secondary: {
-      main: c.grey100,        // 보조 액션 표면
-      dark: c.grey200,
-      contrastText: c.grey900,
+      main: c.primary50,      // Secondary(Tint) 버튼 표면
+      dark: '#FFE9E2',
+      contrastText: c.primary700,
     },
     info: {
-      main: c.blue500,
+      main: c.dataBlue,
       contrastText: c.white,
     },
     warning: {
-      main: c.orange500,
+      main: c.dataOrange,
       contrastText: c.white,
     },
     error: {
-      main: c.red500,
+      main: c.dataRed,
       contrastText: c.white,
     },
     success: {
@@ -79,59 +80,59 @@ const theme = createTheme({
       contrastText: c.white,
     },
     background: {
-      default: c.grey100,     // 관리자 캔버스 — 흰 카드가 얹히는 secondary surface
+      default: c.bgPage,      // 페이지 캔버스 — 흰 카드가 얹히는 배경
       paper: c.white,
     },
     text: {
-      primary: c.grey900,     // 순수 검정 없음 — cool navy 틴트
-      secondary: c.grey700,
-      disabled: c.grey400,
+      primary: c.textStrong,
+      secondary: c.textMuted,
+      disabled: c.greyDisabled,
     },
-    divider: c.grey200,
+    divider: c.borderDefault,
     action: {
-      active: c.grey700,
-      hover: c.grey50,
-      selected: c.blue50,
-      disabled: c.grey400,
-      disabledBackground: c.grey200,
+      active: c.textHeading,
+      hover: c.bgSubtle,
+      selected: c.primary50,
+      disabled: c.greyDisabled,
+      disabledBackground: c.borderTable,
     },
   },
 
   typography: {
     fontFamily: FONT_BASE,
-    // TDS type ramp 매핑
-    h1: { fontSize: '28px', lineHeight: 1.3, fontWeight: 700, letterSpacing: '-0.02em' },
-    h2: { fontSize: '24px', lineHeight: 1.3, fontWeight: 700, letterSpacing: '-0.02em' },
-    h3: { fontSize: '22px', lineHeight: 1.3, fontWeight: 700, letterSpacing: '-0.015em' },
-    h4: { fontSize: '20px', lineHeight: 1.35, fontWeight: 700, letterSpacing: '-0.015em' },
-    h5: { fontSize: '18px', lineHeight: 1.45, fontWeight: 600, letterSpacing: '-0.01em' },   // title-1
-    h6: { fontSize: '17px', lineHeight: 1.45, fontWeight: 600, letterSpacing: '-0.01em' },   // title-2
-    subtitle1: { fontSize: '17px', lineHeight: 1.45, fontWeight: 600, letterSpacing: '-0.01em' },
-    subtitle2: { fontSize: '15px', lineHeight: 1.25, fontWeight: 600, letterSpacing: '-0.005em' }, // label-m
-    body1: { fontSize: '15px', lineHeight: 1.5, fontWeight: 400, letterSpacing: '-0.005em' },      // body-2
-    body2: { fontSize: '13px', lineHeight: 1.5, fontWeight: 400 },                                  // body-3
-    caption: { fontSize: '12px', lineHeight: 1.4, fontWeight: 500 },
-    button: { fontSize: '15px', lineHeight: 1.25, fontWeight: 600, letterSpacing: '-0.005em', textTransform: 'none' },
-    overline: { fontSize: '11px', lineHeight: 1.4, fontWeight: 500, textTransform: 'none' },
+    // Insight type ramp 매핑
+    h1: { fontSize: '24px', lineHeight: 1.3, fontWeight: 700, letterSpacing: '-0.02em' },
+    h2: { fontSize: '22px', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.015em' },  // KPI 숫자
+    h3: { fontSize: '20px', lineHeight: 1.3, fontWeight: 700, letterSpacing: '-0.015em' },
+    h4: { fontSize: '18px', lineHeight: 1.35, fontWeight: 700, letterSpacing: '-0.017em' }, // 섹션 타이틀
+    h5: { fontSize: '18px', lineHeight: 1.45, fontWeight: 700, letterSpacing: '-0.017em' }, // 섹션 타이틀
+    h6: { fontSize: '16px', lineHeight: 1.45, fontWeight: 600, letterSpacing: '-0.019em' },
+    subtitle1: { fontSize: '16px', lineHeight: 1.45, fontWeight: 600, letterSpacing: '-0.019em' },
+    subtitle2: { fontSize: '14px', lineHeight: 1.25, fontWeight: 600 },                     // 탭/보조 버튼 라벨
+    body1: { fontSize: '15px', lineHeight: 1.5, fontWeight: 400, letterSpacing: '-0.02em' }, // 본문, 테이블 셀
+    body2: { fontSize: '13px', lineHeight: 1.5, fontWeight: 400, letterSpacing: '-0.023em' },
+    caption: { fontSize: '12px', lineHeight: 1.4, fontWeight: 400 },
+    button: { fontSize: '16px', lineHeight: 1.25, fontWeight: 600, letterSpacing: '-0.019em', textTransform: 'none' },
+    overline: { fontSize: '11px', lineHeight: 1.4, fontWeight: 600, textTransform: 'none' },
   },
 
   shape: {
-    borderRadius: 12, // radius-m 기본
+    borderRadius: 8, // radius-md 기본 (버튼/인풋/KPI 카드)
   },
 
   transitions: {
     duration: {
-      shortest: 120,  // dur-fast: button press
-      shorter: 200,   // dur-base: toggle, hover
+      shortest: 120,
+      shorter: 200,
       short: 200,
       standard: 200,
-      complex: 320,   // dur-slow: sheet, dialog
+      complex: 320,
       enteringScreen: 320,
       leavingScreen: 200,
     },
     easing: {
-      easeInOut: 'cubic-bezier(0.22, 0.61, 0.36, 1)', // 기본 ease
-      easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',        // sheet 진입
+      easeInOut: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+      easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
       easeIn: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
       sharp: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
     },
@@ -141,20 +142,20 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: c.grey100,
-          letterSpacing: '-0.005em',
+          backgroundColor: c.bgPage,
+          letterSpacing: '-0.02em',
         },
       },
     },
 
-    // ---- 버튼: 사이즈별 height·radius 페어 (M 40/12, L 48/14, S 32/10) ----
+    // ---- 버튼: radius 8(기본)/6(S)/10(L), 높이 40/32/48 ----
     MuiButton: {
       defaultProps: {
         disableElevation: true,
       },
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           minHeight: 40,
           paddingLeft: 16,
           paddingRight: 16,
@@ -164,59 +165,65 @@ const theme = createTheme({
           },
         },
         containedPrimary: {
-          backgroundColor: c.blue500,
-          color: c.white,
-          '&:hover': { backgroundColor: c.blue600 },
-          '&:active': { backgroundColor: c.blue700 },
+          backgroundColor: c.primary500,
+          color: c.white, // 16px SemiBold 기본 — 대비 보완 (작은 텍스트 금지)
+          '&:hover': { backgroundColor: c.primary600 },
+          '&:active': { backgroundColor: c.primary700 },
           '&.Mui-disabled': {
-            backgroundColor: c.blue500,
+            backgroundColor: c.primary500,
             color: c.white,
           },
         },
+        // Secondary(Tint): 배경 #FFF5F2 + 텍스트 #8C3218 (예: 다운로드, 전체 캠페인 보기)
         containedSecondary: {
-          backgroundColor: c.grey100,
-          color: c.grey900,
-          '&:hover': { backgroundColor: c.grey150 },
+          backgroundColor: c.primary50,
+          color: c.primary700,
+          '&:hover': { backgroundColor: '#FFE9E2' },
         },
         containedError: {
-          backgroundColor: c.red500,
-          '&:hover': { backgroundColor: '#D93A47' },
+          backgroundColor: c.dataRed,
+          '&:hover': { backgroundColor: '#C92B17' },
         },
         outlined: {
-          borderColor: c.grey200,
-          color: c.grey900,
+          borderRadius: 6, // radius-sm — 보조/아웃라인 버튼
+          borderColor: c.borderSubtle,
+          color: c.textStrong,
           '&:hover': {
-            borderColor: c.grey300,
-            backgroundColor: c.grey50,
+            borderColor: 'rgba(0,0,0,0.2)',
+            backgroundColor: c.bgSubtle,
           },
         },
         text: {
-          color: c.blue500, // ghost — 텍스트 링크에 가까운 약한 위계
-          '&:hover': { backgroundColor: c.blue50 },
+          color: c.textStrong, // ghost — 배경/보더 없는 약한 위계 (예: 충전하기, 전체보기)
+          '&:hover': { backgroundColor: c.bgSubtle },
+        },
+        textPrimary: {
+          color: c.primary500, // 링크성 텍스트 버튼
+          '&:hover': { backgroundColor: c.primary50 },
         },
         sizeSmall: {
           minHeight: 32,
-          borderRadius: 10,
-          fontSize: '13px',
-          paddingLeft: 12,
-          paddingRight: 12,
+          borderRadius: 6,
+          fontSize: '14px',
+          paddingLeft: 13,
+          paddingRight: 13,
         },
         sizeLarge: {
-          minHeight: 56, // XL
-          borderRadius: 16,
-          fontSize: '17px',
-          fontWeight: 700,
+          minHeight: 48,
+          borderRadius: 10,
+          fontSize: '16px',
+          fontWeight: 600,
         },
       },
     },
 
-    // ---- 카드: radius 16~20, 평면 + 헤어라인 (그림자 없음) ----
+    // ---- 카드: 대형 패널 radius 12, 평면 + 헤어라인 ----
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 16,
+          borderRadius: 12,
           boxShadow: 'none',
-          border: `1px solid ${c.grey200}`,
+          border: `1px solid ${c.borderDefault}`,
           backgroundImage: 'none',
         },
       },
@@ -227,28 +234,28 @@ const theme = createTheme({
           backgroundImage: 'none',
         },
         rounded: {
-          borderRadius: 16,
+          borderRadius: 12,
         },
         outlined: {
-          border: `1px solid ${c.grey200}`,
+          border: `1px solid ${c.borderDefault}`,
           boxShadow: 'none',
         },
-        // 그림자는 floating/modal 전용 — 시트/다이얼로그 수준만 유지
-        elevation1: { boxShadow: '0 1px 2px rgba(6,14,35,0.04), 0 1px 1px rgba(6,14,35,0.04)' },
-        elevation2: { boxShadow: '0 4px 12px rgba(6,14,35,0.06), 0 1px 2px rgba(6,14,35,0.04)' },
-        elevation3: { boxShadow: '0 12px 32px rgba(6,14,35,0.10), 0 2px 6px rgba(6,14,35,0.06)' },
+        // 그림자는 floating 전용
+        elevation1: { boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 1px 1px rgba(0,0,0,0.04)' },
+        elevation2: { boxShadow: '0 4px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' },
+        elevation3: { boxShadow: '0 12px 32px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)' },
       },
     },
     MuiCardContent: {
       styleOverrides: {
         root: {
-          padding: 16, // 밀도 우선 — 컴팩트 관리자 UI
+          padding: 16, // 카드 padding 16~20
           '&:last-child': { paddingBottom: 16 },
         },
       },
     },
 
-    // ---- 칩: full pill, active는 grey-900 flip, brand는 blue-50 ----
+    // ---- 칩: pill, brand는 tint(#FFF5F2 + #8C3218) ----
     MuiChip: {
       styleOverrides: {
         root: {
@@ -257,62 +264,67 @@ const theme = createTheme({
           fontWeight: 600,
           height: 34,
         },
-        sizeSmall: { height: 24, fontSize: '12px' },
+        sizeSmall: { height: 24, fontSize: '11px' },
         filled: {
-          backgroundColor: c.grey100,
-          color: c.grey700,
+          backgroundColor: c.bgSubtle,
+          color: c.textMuted,
         },
         colorPrimary: {
-          backgroundColor: c.blue50,
-          color: c.blue500,
+          backgroundColor: c.primary50,
+          color: c.primary700,
         },
         colorSecondary: {
-          backgroundColor: c.grey900,
+          backgroundColor: c.textHeading,
           color: c.white,
         },
         colorError: {
-          backgroundColor: '#FDEBEC',
-          color: c.red500,
+          backgroundColor: '#FEECEA',
+          color: c.dataRed,
         },
         colorSuccess: {
           backgroundColor: '#E5F5EE',
           color: c.green500,
         },
+        colorInfo: {
+          backgroundColor: c.white,
+          color: '#0958D9', // "필수" 뱃지
+          border: '1px solid #91CAFF',
+        },
         outlined: {
-          borderColor: c.grey200,
+          borderColor: c.borderDefault,
           backgroundColor: c.white,
         },
       },
     },
 
-    // ---- 입력 필드: 48px, radius 12, grey-100 resting → focus 흰 배경 + 1.5px blue ----
+    // ---- 입력 필드: radius 8, #F7F7F7 resting → focus 흰 배경 + 1.5px 오렌지 ----
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          backgroundColor: c.grey100,
+          borderRadius: 8,
+          backgroundColor: c.bgPage,
           transition: 'background-color 200ms cubic-bezier(0.22,0.61,0.36,1)',
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: c.grey200,
+            borderColor: c.borderDefault,
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: c.grey300,
+            borderColor: 'rgba(0,0,0,0.2)',
           },
           '&.Mui-focused': {
             backgroundColor: c.white,
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: c.blue500,
+            borderColor: c.primary500,
             borderWidth: 1.5,
           },
           '&.Mui-error .MuiOutlinedInput-notchedOutline': {
-            borderColor: c.red500,
+            borderColor: c.dataRed,
             borderWidth: 1.5,
           },
         },
         input: {
           '&::placeholder': {
-            color: 'rgba(6,14,35,0.28)',
+            color: c.textMuted,
             opacity: 1,
           },
         },
@@ -321,42 +333,43 @@ const theme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          color: c.grey500,
-          '&.Mui-focused': { color: c.blue500 },
+          color: c.textMuted,
+          '&.Mui-focused': { color: c.primary500 },
         },
       },
     },
 
-    // ---- 테이블: 1px grey-200 헤어라인, tabular 숫자 ----
+    // ---- 테이블: #E5E5E5 보더, 헤더 #F8F9FA, 15px, tabular 숫자 ----
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: `1px solid ${c.grey200}`,
-          fontSize: '13px',
-          padding: '9px 14px', // 밀도 우선 — 컴팩트 행
+          borderBottom: `1px solid ${c.borderTable}`,
+          fontSize: '15px',
+          padding: '9px 14px', // 밀도 우선 — 컴팩트 행 유지
           fontVariantNumeric: 'tabular-nums',
         },
         head: {
-          fontWeight: 600,
-          fontSize: '12px',
-          color: c.grey600,
-          backgroundColor: c.grey50,
+          fontWeight: 500,
+          fontSize: '15px',
+          color: c.textHeading,
+          backgroundColor: c.bgSubtle,
           whiteSpace: 'nowrap',
         },
         sizeSmall: {
           padding: '6px 12px',
+          fontSize: '13px',
         },
       },
     },
     MuiTableRow: {
       styleOverrides: {
         root: {
-          '&:hover': { backgroundColor: c.grey50 },
+          '&:hover': { backgroundColor: c.bgSubtle },
         },
       },
     },
 
-    // ---- 앱바: 흰 배경 + 헤어라인 ----
+    // ---- 앱바(헤더 56px): 흰 배경 + 헤어라인 ----
     MuiAppBar: {
       defaultProps: {
         elevation: 0,
@@ -365,53 +378,55 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: c.white,
-          color: c.grey900,
-          borderBottom: `1px solid ${c.grey200}`,
+          color: c.textHeading,
+          borderBottom: `1px solid ${c.borderDefault}`,
         },
       },
     },
 
-    // ---- 드로어(사이드 내비) ----
+    // ---- 드로어(사이드 내비): 메뉴 아이템 44px, active는 텍스트 컬러로만 구분 ----
     MuiDrawer: {
       styleOverrides: {
         paper: {
           backgroundColor: c.white,
-          borderRight: `1px solid ${c.grey200}`,
+          borderRight: `1px solid ${c.borderDefault}`,
         },
       },
     },
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           margin: '2px 8px',
           minHeight: 44,
+          color: c.textHeading,
+          // Active: 텍스트 #FF5B2C + SemiBold (배경 하이라이트 없음 — 전체 메뉴 중 1개만 active)
           '&.Mui-selected': {
-            backgroundColor: c.blue50,
-            color: c.blue500,
-            '&:hover': { backgroundColor: c.blue50 },
-            '& .MuiListItemIcon-root': { color: c.blue500 },
+            backgroundColor: 'transparent',
+            color: c.primary500,
+            '&:hover': { backgroundColor: c.bgSubtle },
+            '& .MuiListItemIcon-root': { color: c.primary500 },
             '& .MuiListItemText-primary': { fontWeight: 600 },
           },
-          '&:hover': { backgroundColor: c.grey50 },
+          '&:hover': { backgroundColor: c.bgSubtle },
         },
       },
     },
     MuiListItemIcon: {
       styleOverrides: {
         root: {
-          color: c.grey600,
+          color: c.textHeading,
           minWidth: 40,
         },
       },
     },
 
-    // ---- 다이얼로그: radius 20, shadow-3 ----
+    // ---- 다이얼로그: radius 16 ----
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: 20,
-          boxShadow: '0 12px 32px rgba(6,14,35,0.10), 0 2px 6px rgba(6,14,35,0.06)',
+          borderRadius: 16,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)',
           padding: 4,
         },
       },
@@ -424,16 +439,16 @@ const theme = createTheme({
           fontWeight: 600,
           fontSize: '11px',
         },
-        colorError: { backgroundColor: c.red500, color: c.white },
-        colorPrimary: { backgroundColor: c.blue500, color: c.white },
+        colorError: { backgroundColor: c.dataRed, color: c.white },
+        colorPrimary: { backgroundColor: c.primary500, color: c.white },
       },
     },
 
-    // ---- 탭: 2.5px blue 언더라인 ----
+    // ---- 탭: 활성 = 오렌지 텍스트 + 오렌지 언더라인, 비활성 = #737373 ----
     MuiTabs: {
       styleOverrides: {
         indicator: {
-          backgroundColor: c.blue500,
+          backgroundColor: c.primary500,
           height: 2.5,
         },
       },
@@ -443,12 +458,11 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 600,
-          fontSize: '15px',
-          letterSpacing: '-0.005em',
-          color: c.grey500,
+          fontSize: '14px',
+          color: c.textMuted,
           minHeight: 48,
           '&.Mui-selected': {
-            color: c.grey900,
+            color: c.primary500,
           },
         },
       },
@@ -458,34 +472,34 @@ const theme = createTheme({
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          backgroundColor: c.grey900,
+          backgroundColor: c.textHeading,
           fontSize: '13px',
           borderRadius: 8,
-          boxShadow: '0 4px 12px rgba(6,14,35,0.06), 0 1px 2px rgba(6,14,35,0.04)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
         },
       },
     },
     MuiDivider: {
       styleOverrides: {
-        root: { borderColor: c.grey200 },
+        root: { borderColor: c.borderDefault },
       },
     },
     MuiLinearProgress: {
       styleOverrides: {
         root: {
           borderRadius: 999,
-          backgroundColor: c.grey200,
+          backgroundColor: c.borderTable,
           height: 6,
         },
         bar: {
           borderRadius: 999,
-          backgroundColor: c.blue500,
+          backgroundColor: c.primary500,
         },
       },
     },
     MuiCircularProgress: {
       styleOverrides: {
-        root: { color: c.blue500 },
+        root: { color: c.primary500 },
       },
     },
     MuiSwitch: {
@@ -494,13 +508,13 @@ const theme = createTheme({
           '&.Mui-checked': {
             color: c.white,
             '& + .MuiSwitch-track': {
-              backgroundColor: c.blue500,
+              backgroundColor: c.primary500,
               opacity: 1,
             },
           },
         },
         track: {
-          backgroundColor: c.grey300,
+          backgroundColor: '#D6D6D6',
           opacity: 1,
         },
       },
@@ -508,18 +522,34 @@ const theme = createTheme({
     MuiCheckbox: {
       styleOverrides: {
         root: {
-          color: c.grey300,
-          '&.Mui-checked': { color: c.blue500 },
+          color: '#D6D6D6',
+          '&.Mui-checked': { color: c.primary500 },
         },
       },
     },
     MuiAlert: {
       styleOverrides: {
-        root: { borderRadius: 12 },
-        standardError: { backgroundColor: '#FDEBEC', color: c.red500 },
+        root: { borderRadius: 8 },
+        standardError: { backgroundColor: '#FEECEA', color: c.dataRed },
         standardSuccess: { backgroundColor: '#E5F5EE', color: c.green500 },
-        standardInfo: { backgroundColor: c.blue50, color: c.blue600 },
+        standardInfo: { backgroundColor: '#E6F4FF', color: '#0958D9' },
         standardWarning: { backgroundColor: '#FFF4E0', color: '#B26A00' },
+      },
+    },
+
+    // ---- 페이지네이션: 원형 아웃라인, 현재 페이지 오렌지 ----
+    MuiPaginationItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: 999,
+          border: `1px solid ${c.borderSubtle}`,
+          '&.Mui-selected': {
+            backgroundColor: 'transparent',
+            color: c.primary500,
+            fontWeight: 600,
+            border: `1px solid ${c.borderSubtle}`,
+          },
+        },
       },
     },
   },

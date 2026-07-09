@@ -50,9 +50,9 @@ export function InquiryDistribution({ leads }: InquiryDistributionProps) {
                   <p className="text-[15px] font-medium tracking-[-0.005em]">{channel}</p>
                   <span className="text-[13px] font-semibold text-muted-foreground tabular-nums">{count}건</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-[#E5E8EB] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-[#E5E5E5] overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${count === maxCount ? 'bg-[#3182F6]' : 'bg-[#B0B8C1]'}`}
+                    className={`h-full rounded-full ${count === maxCount ? 'bg-[#FF5B2C]' : 'bg-[#B5B5B5]'}`}
                     style={{ width: `${(count / maxCount) * 100}%` }}
                   />
                 </div>

@@ -23,8 +23,8 @@ export function UserStatus({ users }: UserStatusProps) {
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-[15px] font-semibold tracking-[-0.005em]">사용자 현황</CardTitle>
-          {/* brand chip: blue-50 배경 + Toss Blue */}
-          <Badge className="gap-1 rounded-full border-0 bg-[#E8F3FF] text-[#3182F6] shadow-none hover:bg-[#E8F3FF]">
+          {/* brand chip: primary-50 tint 배경 + primary-700 텍스트 (옅은 배경 위 대비 확보) */}
+          <Badge className="gap-1 rounded-full border-0 bg-[#FFF5F2] text-[#8C3218] shadow-none hover:bg-[#FFF5F2]">
             <Users className="h-3 w-3" />
             {users.length}명
           </Badge>
@@ -40,7 +40,7 @@ export function UserStatus({ users }: UserStatusProps) {
             >
               <div className="flex items-center gap-3.5">
                 <Avatar className="h-11 w-11 rounded-[14px]">
-                  <AvatarFallback className="rounded-[14px] bg-[#E8F3FF] text-[#3182F6] font-semibold">
+                  <AvatarFallback className="rounded-[14px] bg-[#FFF5F2] text-[#8C3218] font-semibold">
                     {user.name[0]}
                   </AvatarFallback>
                 </Avatar>

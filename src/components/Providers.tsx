@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
 import { RealtimeProvider } from '@/contexts/RealtimeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import '@/lib/echo';
@@ -11,10 +12,12 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <AuthProvider>
-      <RealtimeProvider>
-        {children}
-      </RealtimeProvider>
-    </AuthProvider>
+    <ThemeRegistry>
+      <AuthProvider>
+        <RealtimeProvider>
+          {children}
+        </RealtimeProvider>
+      </AuthProvider>
+    </ThemeRegistry>
   );
 }

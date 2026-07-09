@@ -12,7 +12,7 @@ interface PageHeaderProps {
 }
 
 /**
- * TDS 컴팩트 페이지 헤더 — 관리자 화면 밀도에 맞춰 타이틀은 18px/700로 작게,
+ * Insight 컴팩트 페이지 헤더 — 섹션 타이틀 18px Bold(-0.3px), 관리자 밀도에 맞춰
  * 설명형 서브타이틀 없이 한 줄. 우측에 액션 슬롯.
  */
 export default function PageHeader({ title, actions, leading }: PageHeaderProps) {
@@ -32,7 +32,7 @@ export default function PageHeader({ title, actions, leading }: PageHeaderProps)
         {leading}
         <Typography
           component="h1"
-          sx={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', color: 'text.primary' }}
+          sx={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.017em', color: 'text.primary' }}
         >
           {title}
         </Typography>

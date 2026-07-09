@@ -49,8 +49,8 @@ export function StatsCards({ totalLeads, activeTickets, totalUsers }: StatsCards
                   </h3>
                   <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
                 </div>
-                {/* 아이콘 칩: blue-50 배경 + Toss Blue — 화면 단일 강조색 */}
-                <div className="rounded-[10px] bg-[#E8F3FF] p-2.5 text-[#3182F6]">
+                {/* 아이콘 칩: primary-50 tint 배경 + Insight Orange — 화면 단일 강조색 */}
+                <div className="rounded-[8px] bg-[#FFF5F2] p-2.5 text-[#FF5B2C]">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
               </div>

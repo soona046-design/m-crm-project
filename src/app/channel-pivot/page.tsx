@@ -190,13 +190,13 @@ const getCategoryForChannel = (channel: string): { code: string; name: string; c
   // 온라인 채널
   const onlineKeywords = ['google', 'naver', 'facebook', 'instagram', 'youtube', 'kakao', 'meta', 'ads', '광고', '검색', 'sns', 'social'];
   if (onlineKeywords.some(keyword => channelLower.includes(keyword))) {
-    return { code: 'online', name: '온라인', color: '#3182F6' };
+    return { code: 'online', name: '온라인', color: '#2196F3' };
   }
 
   // 오프라인 채널
   const offlineKeywords = ['전단', '현수막', '간판', '포스터', '전화', '방문', '오프라인', '지역', '매장'];
   if (offlineKeywords.some(keyword => channelLower.includes(keyword))) {
-    return { code: 'offline', name: '오프라인', color: '#8B95A1' };
+    return { code: 'offline', name: '오프라인', color: '#737373' };
   }
 
   // DB 채널
@@ -206,7 +206,7 @@ const getCategoryForChannel = (channel: string): { code: string; name: string; c
   }
 
   // 기본값: 온라인으로 분류
-  return { code: 'online', name: '온라인', color: '#3182F6' };
+  return { code: 'online', name: '온라인', color: '#2196F3' };
 };
 
 // 일요일~토요일을 한 주로 보는 월 내 주차 (1일이 속한 주가 1주차, 최대 6주차)
@@ -1189,8 +1189,8 @@ export default function ChannelPivotDashboardPage() {
     return value.toLocaleString();
   };
 
-  // 차트 색상 — TDS 팔레트 (Toss Blue 강조 + cool-grey 램프)
-  const COLORS = ['#3182F6', '#8B95A1', '#B0B8C1', '#191F28', '#D1D6DB'];
+  // 차트 색상 — Insight 팔레트 (오렌지 강조 + 뉴트럴 램프)
+  const COLORS = ['#FF5B2C', '#737373', '#B5B5B5', '#2E2E2E', '#D6D6D6'];
 
   // ROI 색상 — TDS: 좋음=grey-900, 보통=grey-600, 나쁨=red-500(danger)
   const getROIColor = (roi: number | undefined) => {
@@ -1578,10 +1578,10 @@ export default function ChannelPivotDashboardPage() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="leads" fill="#3182F6" name="문의" />
-                    <Bar dataKey="tickets" fill="#8B95A1" name="상담" />
-                    <Bar dataKey="appointments" fill="#B0B8C1" name="예약" />
-                    <Bar dataKey="contracts" fill="#191F28" name="계약" />
+                    <Bar dataKey="leads" fill="#FF5B2C" name="문의" />
+                    <Bar dataKey="tickets" fill="#737373" name="상담" />
+                    <Bar dataKey="appointments" fill="#B5B5B5" name="예약" />
+                    <Bar dataKey="contracts" fill="#2E2E2E" name="계약" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -1655,8 +1655,8 @@ export default function ChannelPivotDashboardPage() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="cost" fill="#8B95A1" name="비용" />
-                    <Bar dataKey="revenue" fill="#3182F6" name="수익" />
+                    <Bar dataKey="cost" fill="#737373" name="비용" />
+                    <Bar dataKey="revenue" fill="#FF5B2C" name="수익" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
